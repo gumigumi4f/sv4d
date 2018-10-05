@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-namespace se4d {
+namespace sv4d {
 
     class Options {
         public:

@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <cstdlib>
 
-namespace se4d {
+namespace sv4d {
 
     Options::Options() {
         modelDir = "./";
@@ -40,7 +40,7 @@ namespace se4d {
 
             try {
                 if (args[i] == "-h" || args[i] == "-help") {
-                    std::cerr << "Usage: se4d <command> <options>" << std::endl;
+                    std::cerr << "Usage: sv4d <command> <options>" << std::endl;
                     exit(EXIT_FAILURE);
                 } else if (args[i] == "-output_dir") {
                     modelDir = std::string(args.at(i + 1));

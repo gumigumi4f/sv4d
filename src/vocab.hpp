@@ -5,15 +5,20 @@
 #include <vector>
 #include <unordered_map>
 
-namespace se4d {
+namespace sv4d {
+
+    enum Pos {
+        Noun = 0,
+        Verb = 1,
+        Adjective = 2,
+        Adverb = 3
+    };
 
     struct SynsetData {
         SynsetData();
 
-        std::vector<int> Noun;
-        std::vector<int> Verb;
-        std::vector<int> Adjective;
-        std::vector<int> Adverb;
+        std::vector<int> SynsetLemmaIndices[4];
+        int WordLemmaIndex;
     };
 
     class Vocab {
@@ -23,24 +28,25 @@ namespace se4d {
             int sentenceNum;
             int documentNum;
             int lemmaVocabSize;
-            int wordVocabSize;
             int synsetVocabSize;
+            int wordVocabSize;
 
             std::unordered_map<std::string, int> lemmaVocab;
-            std::unordered_map<std::string, int> wordVocab;
             std::unordered_map<std::string, int> synsetVocab;
 
-            std::vector<int> wordFreq;
+            std::vector<std::string> lidx2Lemma;
+            std::vector<std::string> sidx2Synset;
 
             std::vector<float> lemmaProb;
 
-            std::vector<std::string> widx2Word;
-            std::vector<std::string> sidx2Synset;
-            
-            std::unordered_map<int, std::vector<int>> synsetWordPair;
-            std::unordered_map<int, SynsetData> widx2sidxs;
+            std::vector<int> wordFreq;
 
-            void build(const se4d::Options& opt);
+            std::unordered_map<int, std::vector<int>> synsetDictPair;
+
+            std::unordered_map<int, sv4d::SynsetData> widx2lidxs;
+            std::unordered_map<int, int> lidx2sidx;
+
+            void build(const sv4d::Options& opt);
             void save(const std::string& filepath);
             void load(const std::string& filepath);
     };
