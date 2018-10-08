@@ -25,8 +25,9 @@ namespace sv4d {
         public:
             Vocab();
 
-            int sentenceNum;
-            int documentNum;
+            long totalWordsNum;
+            long sentenceNum;
+            long documentNum;
             int lemmaVocabSize;
             int synsetVocabSize;
             int wordVocabSize;

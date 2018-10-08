@@ -20,6 +20,7 @@ namespace sv4d {
             int negativeSample;
             int dictSample;
             int maxDictPair;
+            int threadNum;
 
             double subSamplingFactor;
             double initialLearningRate;

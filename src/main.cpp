@@ -1,7 +1,8 @@
-#include <iostream>
-
 #include "options.hpp"
 #include "vocab.hpp"
+#include "model.hpp"
+
+#include <iostream>
 
 int main(int argc, char** argv) {
     std::vector<std::string> args(argv, argv + argc);
@@ -21,21 +22,26 @@ int main(int argc, char** argv) {
     std::string command(args[1]);
     if (command == "training") {
         sv4d::Vocab vocab = sv4d::Vocab();
-        vocab.build(opt);
-        // training();
-        vocab.save(opt.modelDir + "vocab.txt");
-        sv4d::Vocab vocab2 = sv4d::Vocab();
-        vocab2.load(opt.modelDir + "vocab.txt");
+        //vocab.build(opt);
+        //vocab.save(opt.modelDir + "vocab.txt");
+        vocab.load(opt.modelDir + "vocab.txt");
+        sv4d::Model model = sv4d::Model(opt, vocab);
+        model.Initialize();
+        model.Training();
         // save_vector();
     } else if (command == "synset_nearest_neighbour") {
-        // load_vocab();
+        sv4d::Vocab vocab = sv4d::Vocab();
+        vocab.load(opt.modelDir + "vocab.txt");
         // load_vector();
         // synset_nearest_neighbour();
     } else if (command == "word_sense_disambiguation") {
-        // load_vocab();
+        sv4d::Vocab vocab = sv4d::Vocab();
+        vocab.load(opt.modelDir + "vocab.txt");
         // load_vector();
         // word_sense_disambiguation();
     }
+    std::string s;
+    std::cin >> s;
 
     return 0;
 }

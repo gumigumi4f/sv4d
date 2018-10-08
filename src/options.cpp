@@ -20,6 +20,7 @@ namespace sv4d {
         negativeSample = 5;
         dictSample = 3;
         maxDictPair = 10;
+        threadNum = 1;
 
         subSamplingFactor = 1e-4;
         initialLearningRate = 0.025;
@@ -42,7 +43,7 @@ namespace sv4d {
                 if (args[i] == "-h" || args[i] == "-help") {
                     std::cerr << "Usage: sv4d <command> <options>" << std::endl;
                     exit(EXIT_FAILURE);
-                } else if (args[i] == "-output_dir") {
+                } else if (args[i] == "-model_dir") {
                     modelDir = std::string(args.at(i + 1));
                 } else if (args[i] == "-synset_data_file") {
                     synsetDataFile = std::string(args.at(i + 1));
@@ -60,6 +61,10 @@ namespace sv4d {
                     negativeSample = std::stoi(args.at(i + 1));
                 } else if (args[i] == "-dict_sample") {
                     dictSample = std::stoi(args.at(i + 1));
+                } else if (args[i] == "-max_dict_pair") {
+                    maxDictPair = std::stoi(args.at(i + 1));
+                } else if (args[i] == "-thread_num") {
+                    threadNum = std::stoi(args.at(i + 1));
                 } else if (args[i] == "-sub_sampling_factor") {
                     subSamplingFactor = std::stof(args.at(i + 1));
                 } else if (args[i] == "-initial_learning_rate") {

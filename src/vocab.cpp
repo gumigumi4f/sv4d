@@ -8,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
+#include <numeric>
 
 namespace sv4d {
 
@@ -19,6 +20,7 @@ namespace sv4d {
     }
 
     Vocab::Vocab() {
+        totalWordsNum = 0;
         sentenceNum = 0;
         documentNum = 0;
         lemmaVocabSize = 0;
@@ -45,9 +47,13 @@ namespace sv4d {
         std::string linebuf;
         std::ifstream fin;
 
+        totalWordsNum = 0;
+        sentenceNum = 0;
+        documentNum = 0;
+
         auto wordStats = std::unordered_map<std::string, int>();
         fin = std::ifstream(opt.trainingCorpus);
-        while (getline(fin, linebuf)) {
+        while (std::getline(fin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);
             if (linebuf == "<doc>") {
                 documentNum += 1;
@@ -93,7 +99,7 @@ namespace sv4d {
         }
 
         fin = std::ifstream(opt.synsetDataFile);
-        while (getline(fin, linebuf)) {
+        while (std::getline(fin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);
             auto data = sv4d::utils::string::split(linebuf, ' ');
             auto lemmaData = sv4d::utils::string::split(data[0], '|');
@@ -121,7 +127,7 @@ namespace sv4d {
         wordVocabSize = widx2lidxs.size();
 
         fin = std::ifstream(opt.synsetDataFile);
-        while (getline(fin, linebuf)) {
+        while (std::getline(fin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);
             auto data = sv4d::utils::string::split(linebuf, ' ');
             if (lemmaVocab.find(data[0]) != lemmaVocab.end()) {
@@ -177,6 +183,8 @@ namespace sv4d {
 
         lemmaVocabSize = lemmaVocab.size();
         synsetVocabSize = synsetVocab.size();
+        totalWordsNum = std::accumulate(wordFreq.begin(), wordFreq.end(), 0);
+        
         // For Debug
         std::cout << lemmaVocab.size() << " " << lidx2Lemma.size() << " " << lemmaProb.size() << " " << lidx2sidx.size() << "\n";
         std::cout << wordVocabSize << " " << wordFreq.size() << " " << widx2lidxs.size() << "\n";
@@ -189,6 +197,7 @@ namespace sv4d {
         std::ofstream fout = std::ofstream(filepath);
 
         fout << lemmaVocabSize << " " << synsetVocabSize << " " << wordVocabSize << "\n";
+        fout << totalWordsNum << " " << sentenceNum << " " << documentNum << "\n";
 
         for (auto pair : lemmaVocab) {
             auto lemma = pair.first;
@@ -218,17 +227,23 @@ namespace sv4d {
         std::string linebuf;
         auto fin = std::ifstream(filepath);
 
-        getline(fin, linebuf);
+        std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
-        auto lemmaVocabSize = std::stoi(sizes[0]);
-        auto synsetVocabSize = std::stoi(sizes[1]);
-        auto wordVocabSize = std::stoi(sizes[2]);
+        lemmaVocabSize = std::stol(sizes[0]);
+        synsetVocabSize = std::stol(sizes[1]);
+        wordVocabSize = std::stol(sizes[2]);
         lidx2Lemma.resize(lemmaVocabSize);
         lemmaProb.resize(lemmaVocabSize);
         sidx2Synset.resize(synsetVocabSize);
         wordFreq.resize(wordVocabSize);
 
-        while (getline(fin, linebuf)) {
+        std::getline(fin, linebuf);
+        auto nums = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
+        totalWordsNum = std::stoi(nums[0]);
+        sentenceNum = std::stoi(nums[1]);
+        documentNum = std::stoi(nums[2]);
+
+        while (std::getline(fin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);
             auto data = sv4d::utils::string::split(linebuf, ' ');
             auto lemmaData = sv4d::utils::string::split(data[0], '|');
