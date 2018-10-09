@@ -59,7 +59,7 @@ namespace sv4d {
             void InitializeUnigramTable();
             void InitializeSubsamplingFactorTable();
             void InitializeFileSize();
-            void ProcessBatch(const sv4d::Vector& documentVector, const sv4d::Vector& sentenceVector);
+            void ProcessBatch(const sv4d::Vector& documentVector, const sv4d::Vector& sentenceVector, const sv4d::Vector& contextVector, const int inputWidx, const int outputWidx);
     };
 
 }

@@ -9,6 +9,7 @@
 #include <thread>
 #include <fstream>
 #include <chrono>
+#include <random>
 #include <stdio.h>
 
 namespace sv4d {
@@ -55,7 +56,6 @@ namespace sv4d {
     void Model::Initialize() {
         InitializeUnigramTable();
         InitializeSubsamplingFactorTable();
-        InitializeSigmoidTable();
         InitializeFileSize();
     }
 
@@ -116,11 +116,24 @@ namespace sv4d {
 
     void Model::TrainingThread(const int threadId) {
         std::string linebuf;
-        auto documentCache = std::vector<std::vector<int>>();
 
+        // random
+        std::mt19937 mt(495);
+        std::uniform_real_distribution<double> rand(0, 1);
+        std::uniform_int_distribution<int> rndwindow(0, windowSize - 1);
+
+        // file
         auto fin = std::ifstream(trainingCorpus);
 
-        for (int iter = 0; iter < epochs; iter++) {
+        // cache
+        auto documentCache = std::vector<std::vector<int>>();
+        sv4d::Vector documentVector = sv4d::Vector(embeddingLayerSize);
+        sv4d::Vector sentenceVector = sv4d::Vector(embeddingLayerSize);
+        sv4d::Vector contextVector = sv4d::Vector(embeddingLayerSize);
+        auto candidateOutputWidx = std::vector<int>(windowSize * 2);
+        auto subSampled = std::vector<bool>();
+
+        for (int iter = 0; iter < epochs; ++iter) {
             fin.seekg(fileSize / threadNum * threadId, fin.beg);
             // seek to head of document
             while (true) {
@@ -137,7 +150,7 @@ namespace sv4d {
                     documentCache.clear();
                 } else if (linebuf == "</doc>") {
                     // document vector
-                    sv4d::Vector documentVector = sv4d::Vector(embeddingLayerSize);
+                    documentVector.setZero();
                     int documentNum = 0;
                     for (auto sentence : documentCache) {
                         for (auto widx : sentence) {
@@ -148,15 +161,66 @@ namespace sv4d {
                     documentVector /= documentNum;
 
                     for (auto sentence : documentCache) {
+                        auto sentenceSize = sentence.size();
+                        subSampled.clear();
+
                         // sentence vector
-                        sv4d::Vector sentenceVector = sv4d::Vector(embeddingLayerSize);
+                        sentenceVector.setZero();
                         int sentenceNum = 0;
                         for (auto widx : sentence) {
                             sentenceNum += 1;
                             sentenceVector += embeddingInWeight[widx];
+                            subSampled.push_back(subsamplingFactorTable[widx] < rand(mt));
                         }
                         sentenceVector /= sentenceNum;
-                        Model::ProcessBatch(documentVector, sentenceVector);
+
+                        for (int pos = 0; pos < sentenceSize; ++pos) {
+                            if (subSampled[pos]) {
+                                continue;
+                            }
+                            int inputWidx = sentence[pos];
+
+                            // context vector
+                            contextVector.setZero();
+                            int contextNum = 0;
+                            int minPos = pos - windowSize < 0 ? 0 : pos - windowSize;
+                            int maxPos = pos + windowSize >= sentenceSize ? sentenceSize - 1 : pos + windowSize;
+                            for (int pos2 = minPos; pos2 <= maxPos; ++pos2) {
+                                contextVector += embeddingInWeight[sentence[pos2]];
+                                contextNum += 1;
+                            }
+                            contextVector /= contextNum;
+
+                            // output widx
+                            candidateOutputWidx.clear();
+                            int reducedWindowSize = windowSize - rndwindow(mt);
+                            int count;
+                            count = reducedWindowSize;
+                            for (int pos2 = pos; pos2 >= 0; --pos2) {
+                                if (subSampled[pos2]) {
+                                    continue;
+                                }
+                                candidateOutputWidx.push_back(sentence[pos2]);
+                                count -= 1;
+                                if (count == 0) {
+                                    break;
+                                }
+                            }
+                            count = reducedWindowSize;
+                            for (int pos2 = pos; pos2 < sentenceSize; ++pos2) {
+                                if (subSampled[pos2]) {
+                                    continue;
+                                }
+                                candidateOutputWidx.push_back(sentence[pos2]);
+                                count -= 1;
+                                if (count == 0) {
+                                    break;
+                                }
+                            }
+                            int outputWidx = candidateOutputWidx[mt() % candidateOutputWidx.size()];
+
+                            Model::ProcessBatch(documentVector, sentenceVector, contextVector, inputWidx, outputWidx);
+                        }
 
                         trainedWordCount += sentence.size();
                     }
@@ -167,24 +231,29 @@ namespace sv4d {
 
                     // print log
                     auto now = std::chrono::system_clock::now();
-                    auto progress = trainedWordCount / (double)((iter + 1) * vocab.totalWordsNum + 1) * 100.0;
+                    auto progress = trainedWordCount / (double)((epochs + 1) * vocab.totalWordsNum + 1) * 100.0;
                     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
                     auto speed = trainedWordCount / ((elapsed + 1) / 1000.0) / (1000.0 * threadNum);
                     printf("%cAlpha: %f  Progress: %.2f%%  Words/thread/sec: %.2fk  ", 13, 0.025, progress, speed);
                     fflush(stdout);
 
                 } else {
-                    linebuf = sv4d::utils::string::trim(linebuf);
                     auto widxes = std::vector<int>();
-                    auto words = sv4d::utils::string::split(linebuf, ' ');
-                    if (words.size() < 5) {
+                    auto sentence = sv4d::utils::string::split(linebuf, ' ');
+                    if (sentence.size() < 5) {
+                        trainedWordCount += sentence.size();
                         continue;
                     }
-                    for (auto word : words) {
+                    for (auto word : sentence) {
                         if (vocab.synsetVocab.find(word) == vocab.synsetVocab.end()) {
                             continue;
                         }
-                        widxes.push_back(vocab.synsetVocab[word]);
+                        auto widx = vocab.synsetVocab[word];
+                        if (widx >= vocab.wordVocabSize) {
+                            continue;
+                        }
+
+                        widxes.push_back(widx);
                     }
                     documentCache.push_back(widxes);
                 }
@@ -192,7 +261,7 @@ namespace sv4d {
         }
     }
 
-    void Model::ProcessBatch(const sv4d::Vector& documentVector, const sv4d::Vector& sentenceVector) {
+    inline void Model::ProcessBatch(const sv4d::Vector& documentVector, const sv4d::Vector& sentenceVector, const sv4d::Vector& contextVector, const int inputWidx, const int outputWidx) {
         
     }
 

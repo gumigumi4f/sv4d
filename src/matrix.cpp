@@ -27,8 +27,7 @@ namespace sv4d {
         float min = -std::sqrt(6.0 / (row + col));
         float max = std::sqrt(6.0 / (row + col));
 
-        std::random_device rnd;
-        std::mt19937 mt(rnd());
+        std::mt19937 mt(495);
         std::uniform_real_distribution<float> glorot(min, max);
         for (int i = 0; i < row; ++i) {
             for (int j = 0; j < col; j++) {

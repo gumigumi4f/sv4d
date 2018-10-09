@@ -30,8 +30,7 @@ namespace sv4d {
         float min = -std::sqrt(6.0 / col);
         float max = std::sqrt(6.0 / col);
 
-        std::random_device rnd;
-        std::mt19937 mt(rnd());
+        std::mt19937 mt(495);
         std::uniform_real_distribution<float> glorot(min, max);
         for (int i = 0; i < col; ++i) {
             data[i] = glorot(mt);
@@ -74,6 +73,20 @@ namespace sv4d {
         return newVector;
     }
 
+    sv4d::Vector sv4d::Vector::operator+(const float value) {
+        sv4d::Vector newVector = sv4d::Vector(col);
+        newVector += *this;
+        newVector += value;
+        return newVector;
+    }
+    
+    sv4d::Vector sv4d::Vector::operator-(const float value) {
+        sv4d::Vector newVector = sv4d::Vector(col);
+        newVector += *this;
+        newVector -= value;
+        return newVector;
+    }
+
     sv4d::Vector sv4d::Vector::operator*(const float value) {
         sv4d::Vector newVector = sv4d::Vector(col);
         newVector += *this;
@@ -85,6 +98,20 @@ namespace sv4d {
         sv4d::Vector newVector = sv4d::Vector(col);
         newVector += *this;
         newVector /= value;
+        return newVector;
+    }
+
+    sv4d::Vector sv4d::Vector::operator+(const int value) {
+        sv4d::Vector newVector = sv4d::Vector(col);
+        newVector += *this;
+        newVector += value;
+        return newVector;
+    }
+
+    sv4d::Vector sv4d::Vector::operator-(const int value) {
+        sv4d::Vector newVector = sv4d::Vector(col);
+        newVector += *this;
+        newVector -= value;
         return newVector;
     }
 
@@ -130,6 +157,20 @@ namespace sv4d {
         return *this;
     }
 
+    sv4d::Vector sv4d::Vector::operator+=(const float value) {
+        for (int i = 0; i < col; ++i) {
+            data[i] += value;
+        }
+        return *this;
+    }
+
+    sv4d::Vector sv4d::Vector::operator-=(const float value) {
+        for (int i = 0; i < col; ++i) {
+            data[i] -= value;
+        }
+        return *this;
+    }
+
     sv4d::Vector sv4d::Vector::operator*=(const float value) {
         for (int i = 0; i < col; ++i) {
             data[i] *= value;
@@ -140,6 +181,20 @@ namespace sv4d {
     sv4d::Vector sv4d::Vector::operator/=(const float value) {
         for (int i = 0; i < col; ++i) {
             data[i] /= value;
+        }
+        return *this;
+    }
+
+    sv4d::Vector sv4d::Vector::operator+=(const int value) {
+        for (int i = 0; i < col; ++i) {
+            data[i] += value;
+        }
+        return *this;
+    }
+
+    sv4d::Vector sv4d::Vector::operator-=(const int value) {
+        for (int i = 0; i < col; ++i) {
+            data[i] -= value;
         }
         return *this;
     }
