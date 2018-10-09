@@ -109,7 +109,7 @@ namespace sv4d {
     }
 
     void Model::InitializeFileSize() {
-        auto fin = std::ifstream(trainingCorpus);
+        std::ifstream fin(trainingCorpus);
         fin.seekg(0, fin.end);
         fileSize = fin.tellg();
     }
@@ -123,7 +123,7 @@ namespace sv4d {
         std::uniform_int_distribution<int> rndwindow(0, windowSize - 1);
 
         // file
-        auto fin = std::ifstream(trainingCorpus);
+        std::ifstream fin(trainingCorpus);
 
         // cache
         auto documentCache = std::vector<std::vector<int>>();
@@ -178,6 +178,7 @@ namespace sv4d {
                             if (subSampled[pos]) {
                                 continue;
                             }
+                            // input widx
                             int inputWidx = sentence[pos];
 
                             // context vector
@@ -217,6 +218,8 @@ namespace sv4d {
                                     break;
                                 }
                             }
+
+                            // output widx
                             int outputWidx = candidateOutputWidx[mt() % candidateOutputWidx.size()];
 
                             Model::ProcessBatch(documentVector, sentenceVector, contextVector, inputWidx, outputWidx);

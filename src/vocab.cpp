@@ -45,15 +45,15 @@ namespace sv4d {
 
     void Vocab::build(const sv4d::Options& opt) {
         std::string linebuf;
-        std::ifstream fin;
 
         totalWordsNum = 0;
         sentenceNum = 0;
         documentNum = 0;
 
         auto wordStats = std::unordered_map<std::string, int>();
-        fin = std::ifstream(opt.trainingCorpus);
-        while (std::getline(fin, linebuf)) {
+        
+        std::ifstream corpusfin(opt.trainingCorpus);
+        while (std::getline(corpusfin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);
             if (linebuf == "<doc>") {
                 documentNum += 1;
@@ -98,8 +98,8 @@ namespace sv4d {
             lidx2sidx[lidx] = sidx;
         }
 
-        fin = std::ifstream(opt.synsetDataFile);
-        while (std::getline(fin, linebuf)) {
+        std::ifstream synsetfin(opt.synsetDataFile);
+        while (std::getline(synsetfin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);
             auto data = sv4d::utils::string::split(linebuf, ' ');
             auto lemmaData = sv4d::utils::string::split(data[0], '|');
@@ -126,8 +126,8 @@ namespace sv4d {
 
         wordVocabSize = widx2lidxs.size();
 
-        fin = std::ifstream(opt.synsetDataFile);
-        while (std::getline(fin, linebuf)) {
+        synsetfin.seekg(0, synsetfin.beg);
+        while (std::getline(synsetfin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);
             auto data = sv4d::utils::string::split(linebuf, ' ');
             if (lemmaVocab.find(data[0]) != lemmaVocab.end()) {
@@ -194,7 +194,7 @@ namespace sv4d {
     }
 
     void Vocab::save(const std::string& filepath) {
-        std::ofstream fout = std::ofstream(filepath);
+        std::ofstream fout(filepath);
 
         fout << lemmaVocabSize << " " << synsetVocabSize << " " << wordVocabSize << "\n";
         fout << totalWordsNum << " " << sentenceNum << " " << documentNum << "\n";
@@ -225,7 +225,7 @@ namespace sv4d {
 
     void Vocab::load(const std::string& filepath) {
         std::string linebuf;
-        auto fin = std::ifstream(filepath);
+        std::ifstream fin(filepath);
 
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');

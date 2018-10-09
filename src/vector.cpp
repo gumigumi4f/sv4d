@@ -225,4 +225,15 @@ namespace sv4d {
         return newVector;
     }
 
+    sv4d::Vector sv4d::Vector::operator%(const sv4d::Vector& vector) {
+        sv4d::Vector newVector = sv4d::Vector(col + vector.col);
+        for (int i = 0; i < col; ++i) {
+            newVector.data[i] = data[i];
+        }
+        for (int i = 0; i < vector.col; ++i) {
+            newVector.data[col + i] = vector.data[i];
+        }
+        return newVector;
+    }
+
 }

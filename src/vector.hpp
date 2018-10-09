@@ -49,6 +49,7 @@ namespace sv4d {
             sv4d::Vector operator/=(const int value);
             sv4d::Vector operator+();
             sv4d::Vector operator-();
+            sv4d::Vector operator%(const sv4d::Vector& vector);
         
         private:
             static const int SigmoidTableSize = 10000;
