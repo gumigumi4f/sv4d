@@ -22,26 +22,30 @@ int main(int argc, char** argv) {
     std::string command(args[1]);
     if (command == "training") {
         sv4d::Vocab vocab = sv4d::Vocab();
-        //vocab.build(opt);
-        //vocab.save(opt.modelDir + "vocab.txt");
-        vocab.load(opt.modelDir + "vocab.txt");
+        vocab.build(opt);
+        vocab.save(opt.modelDir + "vocab.txt");
         sv4d::Model model = sv4d::Model(opt, vocab);
-        model.Initialize();
-        model.Training();
-        // save_vector();
+        model.initialize();
+        model.training();
+        model.saveEmbeddingInWeight(opt.modelDir + "embedding_in_weight.txt");
+        model.saveEmbeddingOutWeight(opt.modelDir + "embedding_out_weight.txt");
+        model.saveSenseSelectionOutWeight(opt.modelDir + "sense_selection_out_weight.txt");
+        model.saveSenseSelectionBiasWeight(opt.modelDir + "sense_selection_out_bias.txt");
     } else if (command == "synset_nearest_neighbour") {
         sv4d::Vocab vocab = sv4d::Vocab();
         vocab.load(opt.modelDir + "vocab.txt");
-        // load_vector();
+        sv4d::Model model = sv4d::Model(opt, vocab);
+        model.initialize();
+        model.loadEmbeddingInWeight(opt.modelDir + "embedding_in_weight.txt");
+        model.loadEmbeddingOutWeight(opt.modelDir + "embedding_out_weight.txt");
+        model.loadSenseSelectionOutWeight(opt.modelDir + "sense_selection_out_weight.txt");
+        model.loadSenseSelectionBiasWeight(opt.modelDir + "sense_selection_out_bias.txt");
         // synset_nearest_neighbour();
     } else if (command == "word_sense_disambiguation") {
         sv4d::Vocab vocab = sv4d::Vocab();
         vocab.load(opt.modelDir + "vocab.txt");
-        // load_vector();
         // word_sense_disambiguation();
     }
-    std::string s;
-    std::cin >> s;
 
     return 0;
 }

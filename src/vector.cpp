@@ -3,6 +3,7 @@
 #include <vector>
 #include <complex>
 #include <random>
+#include <numeric>
 
 namespace sv4d {
 
@@ -35,6 +36,10 @@ namespace sv4d {
         for (int i = 0; i < col; ++i) {
             data[i] = glorot(mt);
         }
+    }
+
+    float Vector::sum() {
+        return std::accumulate(data.begin(), data.end(), 0);
     }
 
     float& sv4d::Vector::operator[](int idx) {
@@ -225,15 +230,12 @@ namespace sv4d {
         return newVector;
     }
 
-    sv4d::Vector sv4d::Vector::operator%(const sv4d::Vector& vector) {
-        sv4d::Vector newVector = sv4d::Vector(col + vector.col);
+    float sv4d::Vector::operator%(const sv4d::Vector& vector) {
+        float dot = 0.0;
         for (int i = 0; i < col; ++i) {
-            newVector.data[i] = data[i];
+            dot += data[i] + vector[i];
         }
-        for (int i = 0; i < vector.col; ++i) {
-            newVector.data[col + i] = vector.data[i];
-        }
-        return newVector;
+        return dot;
     }
 
 }

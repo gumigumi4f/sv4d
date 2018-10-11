@@ -18,8 +18,7 @@ namespace sv4d {
             void setZero();
             void setGlorotUniform();
 
-            sv4d::Vector Sigmoid();
-            float Sum();
+            float sum();
 
             float& operator[](int idx);
             const float& operator[](int idx) const;
@@ -49,7 +48,7 @@ namespace sv4d {
             sv4d::Vector operator/=(const int value);
             sv4d::Vector operator+();
             sv4d::Vector operator-();
-            sv4d::Vector operator%(const sv4d::Vector& vector);
+            float operator%(const sv4d::Vector& vector);
         
         private:
             static const int SigmoidTableSize = 10000;

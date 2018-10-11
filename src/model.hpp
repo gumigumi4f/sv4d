@@ -27,7 +27,8 @@ namespace sv4d {
             int dictSample;
             int maxDictPair;
             int threadNum;
-            int fileSize;
+
+            long fileSize;
 
             double subSamplingFactor;
             double initialLearningRate;
@@ -46,20 +47,36 @@ namespace sv4d {
 
             std::vector<int> unigramTable;
             std::vector<double> subsamplingFactorTable;
+            std::vector<float> sigmoidTable;
 
-            void Initialize();
-            void Training();
-            void TrainingThread(const int threadId);
+            void initialize();
+            void training();
+            void trainingThread(const int threadId);
+            void saveEmbeddingInWeight(const std::string& filepath);
+            void loadEmbeddingInWeight(const std::string& filepath);
+            void saveEmbeddingOutWeight(const std::string& filepath);
+            void loadEmbeddingOutWeight(const std::string& filepath);
+            void saveSenseSelectionOutWeight(const std::string& filepath);
+            void loadSenseSelectionOutWeight(const std::string& filepath);
+            void saveSenseSelectionBiasWeight(const std::string& filepath);
+            void loadSenseSelectionBiasWeight(const std::string& filepath);
 
         private:
+            static const int SigmoidTableSize = 10000;
+            static constexpr float MaxSigmoid = 10.0f;
+
             long trainedWordCount;
 
             std::chrono::system_clock::time_point startTime;
 
-            void InitializeUnigramTable();
-            void InitializeSubsamplingFactorTable();
-            void InitializeFileSize();
-            void ProcessBatch(const sv4d::Vector& documentVector, const sv4d::Vector& sentenceVector, const sv4d::Vector& contextVector, const int inputWidx, const int outputWidx);
+            void initializeUnigramTable();
+            void initializeSubsamplingFactorTable();
+            void initializeSigmoidTable();
+            void initializeFileSize();
+
+            inline float Sigmoid(float f) {
+                return sigmoidTable[(int)((f + MaxSigmoid) * (SigmoidTableSize / MaxSigmoid / 2))];
+            }
     };
 
 }
