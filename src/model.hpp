@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <chrono>
+#include <cmath>
 
 namespace sv4d {
 
@@ -62,8 +63,8 @@ namespace sv4d {
             void loadSenseSelectionBiasWeight(const std::string& filepath);
 
         private:
-            static const int SigmoidTableSize = 10000;
-            static constexpr float MaxSigmoid = 10.0f;
+            static const int SigmoidTableSize = 1024;
+            static const int MaxSigmoid = 8;
 
             long trainedWordCount;
 
@@ -74,8 +75,56 @@ namespace sv4d {
             void initializeSigmoidTable();
             void initializeFileSize();
 
-            inline float Sigmoid(float f) {
-                return sigmoidTable[(int)((f + MaxSigmoid) * (SigmoidTableSize / MaxSigmoid / 2))];
+            inline float sigmoid(float x) {
+                if (x < -MaxSigmoid) {
+                    return 0.0;
+                } else if (x > MaxSigmoid) {
+                    return 1.0;
+                } else {
+                    int i = int((x + MaxSigmoid) * SigmoidTableSize / MaxSigmoid / 2);
+                    return sigmoidTable[i];
+                }
+            }
+
+            inline std::vector<float> sigmoid(const std::vector<float> x) {
+                auto output = std::vector<float>();
+                for (int i = 0; i < x.size(); ++i) {
+                    output.push_back(sigmoid(x[i]));
+                }
+                return output;
+            }
+
+            inline std::vector<float> softmax(const std::vector<float>& logits, float temperature) {
+                float max = 0.0;
+                auto output = std::vector<float>();
+                for (int i = 0; i < logits.size(); ++i) {
+                    auto temped_logit = logits[i] / temperature;
+                    output.push_back(temped_logit);
+                    max = std::max(max, temped_logit);
+                }
+                float sum = 0.0;
+                for (int i = 0; i < logits.size(); ++i) {
+                    output[i] = std::exp(output[i] - max);
+                    sum += output[i];
+                }
+                for (int i = 0; i < logits.size(); ++i) {
+                    output[i] /= sum;
+                }
+                return output;
+            }
+
+            inline std::vector<float> clipByValue(const std::vector<float>& x, float min, float max) {
+                auto output = std::vector<float>();
+                for (int i = 0; i < x.size(); ++i) {
+                    if (x[i] > max) {
+                        output.push_back(max);
+                    } else if (x[i] < min) {
+                        output.push_back(min);
+                    } else {
+                        output.push_back(x[i]);
+                    }
+                }
+                return output;
             }
     };
 

@@ -16,7 +16,7 @@ namespace sv4d {
             std::vector<float> data;
 
             void setZero();
-            void setGlorotUniform();
+            void setRandomUniform(double min, double max);
 
             float sum();
 

@@ -22,16 +22,13 @@ namespace sv4d {
         }
     }
     
-    void Matrix::setGlorotUniform()
+    void Matrix::setRandomUniform(double min, double max)
     {
-        float min = -std::sqrt(6.0 / (row + col));
-        float max = std::sqrt(6.0 / (row + col));
-
         std::mt19937 mt(495);
-        std::uniform_real_distribution<float> glorot(min, max);
+        std::uniform_real_distribution<float> r(min, max);
         for (int i = 0; i < row; ++i) {
             for (int j = 0; j < col; j++) {
-                data[i][j] = glorot(mt);
+                data[i][j] = r(mt);
             }
         }
     }

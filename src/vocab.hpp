@@ -17,8 +17,16 @@ namespace sv4d {
     struct SynsetData {
         SynsetData();
 
-        std::vector<int> SynsetLemmaIndices[4];
-        int WordLemmaIndex;
+        std::vector<int> synsetLemmaIndices[4];
+        std::vector<int> validPos;
+        int wordLemmaIndex;
+    };
+
+    struct SynsetDictPair {
+        SynsetDictPair();
+
+        std::vector<int> dictPair;
+        int dpos;
     };
 
     class Vocab {
@@ -42,7 +50,7 @@ namespace sv4d {
 
             std::vector<int> wordFreq;
 
-            std::unordered_map<int, std::vector<int>> synsetDictPair;
+            std::unordered_map<int, sv4d::SynsetDictPair> synsetDictPair;
 
             std::unordered_map<int, sv4d::SynsetData> widx2lidxs;
             std::unordered_map<int, int> lidx2sidx;

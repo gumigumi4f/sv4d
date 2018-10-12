@@ -22,8 +22,9 @@ int main(int argc, char** argv) {
     std::string command(args[1]);
     if (command == "training") {
         sv4d::Vocab vocab = sv4d::Vocab();
-        vocab.build(opt);
-        vocab.save(opt.modelDir + "vocab.txt");
+        //vocab.build(opt);
+        //vocab.save(opt.modelDir + "vocab.txt");
+        vocab.load(opt.modelDir + "vocab.txt");
         sv4d::Model model = sv4d::Model(opt, vocab);
         model.initialize();
         model.training();

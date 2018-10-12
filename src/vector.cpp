@@ -26,15 +26,12 @@ namespace sv4d {
         std::fill(data.begin(), data.end(), 0.0f);
     }
 
-    void Vector::setGlorotUniform()
+    void Vector::setRandomUniform(double min, double max)
     {
-        float min = -std::sqrt(6.0 / col);
-        float max = std::sqrt(6.0 / col);
-
         std::mt19937 mt(495);
-        std::uniform_real_distribution<float> glorot(min, max);
+        std::uniform_real_distribution<float> r(-min, max);
         for (int i = 0; i < col; ++i) {
-            data[i] = glorot(mt);
+            data[i] = r(mt);
         }
     }
 
@@ -233,7 +230,7 @@ namespace sv4d {
     float sv4d::Vector::operator%(const sv4d::Vector& vector) {
         float dot = 0.0;
         for (int i = 0; i < col; ++i) {
-            dot += data[i] + vector[i];
+            dot += data[i] * vector.data[i];
         }
         return dot;
     }

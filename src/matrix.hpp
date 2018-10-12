@@ -16,7 +16,7 @@ namespace sv4d {
             std::vector<sv4d::Vector> data;
 
             void setZero();
-            void setGlorotUniform();
+            void setRandomUniform(double min, double max);
 
             sv4d::Vector& operator[](int idx);
             const sv4d::Vector& operator[](int idx) const;
