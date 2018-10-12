@@ -77,6 +77,18 @@ namespace sv4d {
 
         }
 
+        namespace operation {
+
+            float sigmoid(float x);
+
+            std::vector<float> computeSigmoidTable();
+
+            const int SigmoidTableSize = 1024;
+            const int MaxSigmoid = 8.0;
+            const std::vector<float> sigmoidTable = computeSigmoidTable();
+            
+        }
+
     }
 
 }

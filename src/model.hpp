@@ -15,8 +15,6 @@ namespace sv4d {
         public:
             Model(const sv4d::Options& opt, const sv4d::Vocab& v);
 
-            const int UnigramTableSize = 1e8;
-
             sv4d::Vocab vocab;
 
             std::string trainingCorpus;
@@ -31,15 +29,15 @@ namespace sv4d {
 
             long fileSize;
 
-            double subSamplingFactor;
-            double initialLearningRate;
-            double minLearningRate;
-            double initialTemperature;
-            double minTemperature;
-            double initialBetaDict;
-            double minBetaDict;
-            double initialBetaReward;
-            double minBetaReward;
+            float subSamplingFactor;
+            float initialLearningRate;
+            float minLearningRate;
+            float initialTemperature;
+            float minTemperature;
+            float initialBetaDict;
+            float minBetaDict;
+            float initialBetaReward;
+            float minBetaReward;
 
             sv4d::Matrix senseSelectionOutWeight;
             sv4d::Vector senseSelectionOutBias;
@@ -47,8 +45,7 @@ namespace sv4d {
             sv4d::Matrix embeddingOutWeight;
 
             std::vector<int> unigramTable;
-            std::vector<double> subsamplingFactorTable;
-            std::vector<float> sigmoidTable;
+            std::vector<float> subsamplingFactorTable;
 
             void initialize();
             void training();
@@ -63,8 +60,7 @@ namespace sv4d {
             void loadSenseSelectionBiasWeight(const std::string& filepath);
 
         private:
-            static const int SigmoidTableSize = 1024;
-            static const int MaxSigmoid = 8;
+            static const int UnigramTableSize = 1e8;
 
             long trainedWordCount;
 
@@ -72,60 +68,7 @@ namespace sv4d {
 
             void initializeUnigramTable();
             void initializeSubsamplingFactorTable();
-            void initializeSigmoidTable();
             void initializeFileSize();
-
-            inline float sigmoid(float x) {
-                if (x < -MaxSigmoid) {
-                    return 0.0;
-                } else if (x > MaxSigmoid) {
-                    return 1.0;
-                } else {
-                    int i = int((x + MaxSigmoid) * SigmoidTableSize / MaxSigmoid / 2);
-                    return sigmoidTable[i];
-                }
-            }
-
-            inline std::vector<float> sigmoid(const std::vector<float> x) {
-                auto output = std::vector<float>();
-                for (int i = 0; i < x.size(); ++i) {
-                    output.push_back(sigmoid(x[i]));
-                }
-                return output;
-            }
-
-            inline std::vector<float> softmax(const std::vector<float>& logits, float temperature) {
-                float max = 0.0;
-                auto output = std::vector<float>();
-                for (int i = 0; i < logits.size(); ++i) {
-                    auto temped_logit = logits[i] / temperature;
-                    output.push_back(temped_logit);
-                    max = std::max(max, temped_logit);
-                }
-                float sum = 0.0;
-                for (int i = 0; i < logits.size(); ++i) {
-                    output[i] = std::exp(output[i] - max);
-                    sum += output[i];
-                }
-                for (int i = 0; i < logits.size(); ++i) {
-                    output[i] /= sum;
-                }
-                return output;
-            }
-
-            inline std::vector<float> clipByValue(const std::vector<float>& x, float min, float max) {
-                auto output = std::vector<float>();
-                for (int i = 0; i < x.size(); ++i) {
-                    if (x[i] > max) {
-                        output.push_back(max);
-                    } else if (x[i] < min) {
-                        output.push_back(min);
-                    } else {
-                        output.push_back(x[i]);
-                    }
-                }
-                return output;
-            }
     };
 
 }

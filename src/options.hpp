@@ -22,15 +22,15 @@ namespace sv4d {
             int maxDictPair;
             int threadNum;
 
-            double subSamplingFactor;
-            double initialLearningRate;
-            double minLearningRate;
-            double initialTemperature;
-            double minTemperature;
-            double initialBetaDict;
-            double minBetaDict;
-            double initialBetaReward;
-            double minBetaReward;
+            float subSamplingFactor;
+            float initialLearningRate;
+            float minLearningRate;
+            float initialTemperature;
+            float minTemperature;
+            float initialBetaDict;
+            float minBetaDict;
+            float initialBetaReward;
+            float minBetaReward;
 
             void parse(const std::vector<std::string>& args);
     };

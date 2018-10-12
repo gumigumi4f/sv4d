@@ -16,9 +16,12 @@ namespace sv4d {
             std::vector<float> data;
 
             void setZero();
-            void setRandomUniform(double min, double max);
+            void setRandomUniform(float min, float max);
 
             float sum();
+            sv4d::Vector sigmoid();
+            sv4d::Vector softmax(float temperature);
+            sv4d::Vector clipByValue(float min, float max);
 
             float& operator[](int idx);
             const float& operator[](int idx) const;
@@ -49,10 +52,6 @@ namespace sv4d {
             sv4d::Vector operator+();
             sv4d::Vector operator-();
             float operator%(const sv4d::Vector& vector);
-        
-        private:
-            static const int SigmoidTableSize = 10000;
-            static const int SigmoidTableMax = 6.0;
     };
 
 }

@@ -23,7 +23,7 @@ namespace sv4d {
     };
 
     struct SynsetDictPair {
-        SynsetDictPair();
+        SynsetDictPair() : dictPair(), dpos(0) {};
 
         std::vector<int> dictPair;
         int dpos;
@@ -36,6 +36,7 @@ namespace sv4d {
             long totalWordsNum;
             long sentenceNum;
             long documentNum;
+
             int lemmaVocabSize;
             int synsetVocabSize;
             int wordVocabSize;
@@ -46,14 +47,12 @@ namespace sv4d {
             std::vector<std::string> lidx2Lemma;
             std::vector<std::string> sidx2Synset;
 
+            std::vector<sv4d::SynsetData> widx2lidxs;
+            std::vector<int> lidx2sidx;
+
             std::vector<float> lemmaProb;
-
             std::vector<int> wordFreq;
-
             std::unordered_map<int, sv4d::SynsetDictPair> synsetDictPair;
-
-            std::unordered_map<int, sv4d::SynsetData> widx2lidxs;
-            std::unordered_map<int, int> lidx2sidx;
 
             void build(const sv4d::Options& opt);
             void save(const std::string& filepath);

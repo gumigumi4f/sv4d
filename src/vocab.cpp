@@ -20,15 +20,11 @@ namespace sv4d {
         wordLemmaIndex = 0;
     }
 
-    SynsetDictPair::SynsetDictPair() {
-        dictPair = std::vector<int>();
-        dpos = 0;
-    }
-
     Vocab::Vocab() {
         totalWordsNum = 0;
         sentenceNum = 0;
         documentNum = 0;
+        
         lemmaVocabSize = 0;
         synsetVocabSize = 0;
         wordVocabSize = 0;
@@ -39,22 +35,16 @@ namespace sv4d {
         lidx2Lemma = std::vector<std::string>();
         sidx2Synset = std::vector<std::string>();
 
+        widx2lidxs = std::vector<sv4d::SynsetData>();
+        lidx2sidx = std::vector<int>();
+
         lemmaProb = std::vector<float>();
-
         wordFreq = std::vector<int>();
-
         synsetDictPair = std::unordered_map<int, sv4d::SynsetDictPair>();
-
-        widx2lidxs = std::unordered_map<int, sv4d::SynsetData>();
-        lidx2sidx = std::unordered_map<int, int>();
     }
 
     void Vocab::build(const sv4d::Options& opt) {
         std::string linebuf;
-
-        totalWordsNum = 0;
-        sentenceNum = 0;
-        documentNum = 0;
 
         auto wordStats = std::unordered_map<std::string, int>();
         
@@ -76,17 +66,14 @@ namespace sv4d {
 
             sentenceNum += 1;
             if (sentenceNum % 10000 == 0) {
-                printf("%cReading Line: %dk  ", 13, sentenceNum / 1000);
+                printf("%cReading Line: %ldk  ", 13, sentenceNum / 1000);
                 fflush(stdout);
             }
         }
-        printf("\n");
-        printf("SentenceNum: %d  DocumentNum: %d  \n", sentenceNum, documentNum);
-        printf("Reading sense file:  \n");
 
         auto sortedWordStats = std::vector<std::pair<std::string, int>>(wordStats.begin(), wordStats.end());
         std::sort(sortedWordStats.begin(), sortedWordStats.end(), [](const std::pair<std::string, int> & a, const std::pair<std::string, int> & b) -> bool { return a.second > b.second; });
-        for (auto pair : sortedWordStats) {
+        for (auto& pair : sortedWordStats) {
             auto word = pair.first;
             auto freq = pair.second;
 
@@ -103,10 +90,14 @@ namespace sv4d {
             synsetVocab[word] = sidx;
             sidx2Synset.push_back(word);
             wordFreq.push_back(freq);
-            widx2lidxs[sidx] = sv4d::SynsetData();
+            widx2lidxs.push_back(sv4d::SynsetData());
             widx2lidxs[sidx].wordLemmaIndex = sidx;
-            lidx2sidx[lidx] = sidx;
+            lidx2sidx.push_back(sidx);
         }
+
+        printf("\n");
+        printf("SentenceNum: %ld  DocumentNum: %ld  \n", sentenceNum, documentNum);
+        printf("Reading sense file:  \n");
 
         std::ifstream synsetfin(opt.synsetDataFile);
         while (std::getline(synsetfin, linebuf)) {
@@ -130,9 +121,9 @@ namespace sv4d {
             synsetVocab[word] = sidx;
             sidx2Synset.push_back(word);
             wordFreq.push_back(0);
-            widx2lidxs[sidx] = sv4d::SynsetData();
+            widx2lidxs.push_back(sv4d::SynsetData());
             widx2lidxs[sidx].wordLemmaIndex = sidx;
-            lidx2sidx[lidx] = sidx;
+            lidx2sidx.push_back(sidx);
         }
 
         wordVocabSize = widx2lidxs.size();
@@ -185,7 +176,7 @@ namespace sv4d {
 
             auto widx = synsetVocab[word];
             auto sidx = synsetVocab[synset];
-            lidx2sidx[lidx] = sidx;
+            lidx2sidx.push_back(sidx);
             if (pos == "n") {
                 widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Noun].push_back(sidx);
                 if (std::find(widx2lidxs[widx].validPos.begin(), widx2lidxs[widx].validPos.end(), (int)sv4d::Pos::Noun) == widx2lidxs[widx].validPos.end()) {
@@ -231,7 +222,7 @@ namespace sv4d {
         fout << lemmaVocabSize << " " << synsetVocabSize << " " << wordVocabSize << "\n";
         fout << totalWordsNum << " " << sentenceNum << " " << documentNum << "\n";
 
-        for (auto pair : lemmaVocab) {
+        for (auto& pair : lemmaVocab) {
             auto lemma = pair.first;
             auto lidx = pair.second;
 
@@ -271,7 +262,9 @@ namespace sv4d {
         wordVocabSize = std::stol(sizes[2]);
         lidx2Lemma.resize(lemmaVocabSize);
         lemmaProb.resize(lemmaVocabSize);
+        lidx2sidx.resize(lemmaVocabSize);
         sidx2Synset.resize(synsetVocabSize);
+        widx2lidxs.resize(wordVocabSize);
         wordFreq.resize(wordVocabSize);
 
         std::getline(fin, linebuf);
@@ -306,7 +299,6 @@ namespace sv4d {
             
             if (synset != "*") {
                 if (synsetVocab.find(synset) == synsetVocab.end()) {
-
                     synsetVocab[synset] = sidx;
                     sidx2Synset[sidx] = synset;
                     if (data[6] != "-1") {
