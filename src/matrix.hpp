@@ -6,14 +6,14 @@
 namespace sv4d {
 
     class Matrix {
-        public:
-            Matrix();
-            Matrix(int m, int n);
-
+        protected:
+            std::vector<sv4d::Vector> data;
             int row;
             int col;
 
-            std::vector<sv4d::Vector> data;
+        public:
+            Matrix();
+            Matrix(int m, int n);
 
             void setZero();
             void setRandomUniform(float min, float max);

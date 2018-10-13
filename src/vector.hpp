@@ -6,14 +6,13 @@
 namespace sv4d {
 
     class Vector {
+        protected:
+            std::vector<float> data;
+            int col;
+
         public:
             Vector();
             Vector(int n);
-            Vector(const std::vector<float>& vec);
-
-            int col;
-
-            std::vector<float> data;
 
             void setZero();
             void setRandomUniform(float min, float max);
@@ -22,6 +21,8 @@ namespace sv4d {
             sv4d::Vector sigmoid();
             sv4d::Vector softmax(float temperature);
             sv4d::Vector clipByValue(float min, float max);
+
+            std::vector<float>& getData();
 
             float& operator[](int idx);
             const float& operator[](int idx) const;

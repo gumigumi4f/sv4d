@@ -273,7 +273,7 @@ namespace sv4d {
                                     sv4d::Vector senseSelectionLogits = sv4d::Vector(senseNum);
                                     for (int i = 0; i < senseNum; ++i) {
                                         int lidx = synsetLemmaIndices[i];
-                                        senseSelectionLogits[senseNum] = (senseSelectionOutWeight[lidx] % featureVectorCache) + senseSelectionOutBias[lidx];
+                                        senseSelectionLogits[i] = (senseSelectionOutWeight[lidx] % featureVectorCache) + senseSelectionOutBias[lidx];
                                     }
                                     auto senseSelectionProb = senseSelectionLogits.softmax(temperature);
 
@@ -281,7 +281,7 @@ namespace sv4d {
 
                                     // embedding
                                     for (int i = 0; i < senseNum; ++i) {
-                                        sv4d::Vector embeddingInBufVector;
+                                        sv4d::Vector embeddingInBufVector = sv4d::Vector(embeddingLayerSize);
 
                                         auto sidx = vocab.lidx2sidx[synsetLemmaIndices[i]];
                                         sv4d::SynsetDictPair synsetDictPair;
@@ -304,7 +304,7 @@ namespace sv4d {
                                             float dot = vSynsetIn % vWordOut;
                                             rewardLogits[i] += dot * betaReward;
                                             float g = sv4d::utils::operation::sigmoid(-dot);
-                                            embeddingInBufVector = vWordOut * (g * lr);
+                                            embeddingInBufVector += vWordOut * (g * lr);
                                             embeddingOutBufVector += vSynsetIn * (g * lr);
                                         }
 
@@ -379,7 +379,7 @@ namespace sv4d {
 
                                 // word training
                                 {
-                                    sv4d::Vector embeddingInBufVector;
+                                    sv4d::Vector embeddingInBufVector = sv4d::Vector(embeddingLayerSize);
 
                                     auto wlidx = synsetData.wordLemmaIndex;
                                     auto wsidx = vocab.lidx2sidx[wlidx];
@@ -395,7 +395,7 @@ namespace sv4d {
                                     {
                                         float dot = vWordIn % vWordOut;
                                         float g = sv4d::utils::operation::sigmoid(-dot);
-                                        embeddingInBufVector = vWordOut * (g * lr);
+                                        embeddingInBufVector += vWordOut * (g * lr);
                                         embeddingOutBufVector += vWordIn * (g * lr);
                                     }
 
@@ -488,7 +488,7 @@ namespace sv4d {
         fout << vocab.synsetVocabSize << " " << embeddingLayerSize << "\n";
         for (int sidx = 0; sidx < vocab.synsetVocabSize; ++sidx) {
             auto synset = vocab.sidx2Synset[sidx];
-            auto strvec = sv4d::utils::string::join(sv4d::utils::string::floatvec_to_strvec(embeddingInWeight[sidx].data), ' ');
+            auto strvec = sv4d::utils::string::join(sv4d::utils::string::floatvec_to_strvec(embeddingInWeight[sidx].getData()), ' ');
             fout << synset << " " << strvec << "\n";
         }
 
@@ -511,7 +511,7 @@ namespace sv4d {
                 continue;
             }
             auto strvec = std::vector<std::string>(data.begin() + 1, data.end());
-            embeddingInWeight[vocab.synsetVocab[data[0]]].data = sv4d::utils::string::strvec_to_floatvec(strvec);
+            embeddingInWeight[vocab.synsetVocab[data[0]]].getData() = sv4d::utils::string::strvec_to_floatvec(strvec);
         }
     }
 
@@ -521,7 +521,7 @@ namespace sv4d {
         fout << vocab.wordVocabSize << " " << embeddingLayerSize << "\n";
         for (int widx = 0; widx < vocab.wordVocabSize; ++widx) {
             auto word = vocab.sidx2Synset[widx];
-            auto strvec = sv4d::utils::string::join(sv4d::utils::string::floatvec_to_strvec(embeddingOutWeight[widx].data), ' ');
+            auto strvec = sv4d::utils::string::join(sv4d::utils::string::floatvec_to_strvec(embeddingOutWeight[widx].getData()), ' ');
             fout << word << " " << strvec << "\n";
         }
 
@@ -544,7 +544,7 @@ namespace sv4d {
                 continue;
             }
             auto strvec = std::vector<std::string>(data.begin() + 1, data.end());
-            embeddingOutWeight[vocab.synsetVocab[data[0]]].data = sv4d::utils::string::strvec_to_floatvec(strvec);
+            embeddingOutWeight[vocab.synsetVocab[data[0]]].getData() = sv4d::utils::string::strvec_to_floatvec(strvec);
         }
     }
 
@@ -554,7 +554,7 @@ namespace sv4d {
         fout << vocab.lemmaVocabSize << " " << embeddingLayerSize * 3 << "\n";
         for (int lidx = 0; lidx < vocab.lemmaVocabSize; ++lidx) {
             auto lemma = vocab.lidx2Lemma[lidx];
-            auto strvec = sv4d::utils::string::join(sv4d::utils::string::floatvec_to_strvec(senseSelectionOutWeight[lidx].data), ' ');
+            auto strvec = sv4d::utils::string::join(sv4d::utils::string::floatvec_to_strvec(senseSelectionOutWeight[lidx].getData()), ' ');
             fout << lemma << " " << strvec << "\n";
         }
 
@@ -577,7 +577,7 @@ namespace sv4d {
                 continue;
             }
             auto strvec = std::vector<std::string>(data.begin() + 1, data.end());
-            embeddingOutWeight[vocab.lemmaVocab[data[0]]].data = sv4d::utils::string::strvec_to_floatvec(strvec);
+            embeddingOutWeight[vocab.lemmaVocab[data[0]]].getData() = sv4d::utils::string::strvec_to_floatvec(strvec);
         }
     }
 
@@ -587,7 +587,7 @@ namespace sv4d {
         fout << vocab.lemmaVocabSize << " " << 1 << "\n";
         for (int lidx = 0; lidx < vocab.lemmaVocabSize; ++lidx) {
             auto lemma = vocab.lidx2Lemma[lidx];
-            fout << lemma << " " << senseSelectionOutBias.data[lidx] << "\n";
+            fout << lemma << " " << senseSelectionOutBias.getData()[lidx] << "\n";
         }
 
         fout.close();
@@ -604,7 +604,7 @@ namespace sv4d {
         for (int i = 0; i < lemmaVocabSize; ++i) {
             std::getline(fin, linebuf);
             auto data = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
-            senseSelectionOutBias.data[i] = std::stof(data[1]);
+            senseSelectionOutBias.getData()[i] = std::stof(data[1]);
         }
     }
 

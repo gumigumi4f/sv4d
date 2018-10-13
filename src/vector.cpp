@@ -10,17 +10,13 @@ namespace sv4d {
 
     Vector::Vector() : Vector(0) {}
 
-    Vector::Vector(int n) : col(n), data(col, 0.0) {}
+    Vector::Vector(int n) : data(n, 0.0), col(n) {}
 
-    Vector::Vector(const std::vector<float>& vec) : col(vec.size()), data(vec) {}
-
-    void Vector::setZero()
-    {
+    void Vector::setZero() {
         std::fill(data.begin(), data.end(), 0.0);
     }
 
-    void Vector::setRandomUniform(float min, float max)
-    {
+    void Vector::setRandomUniform(float min, float max) {
         std::mt19937 mt(495);
         std::uniform_real_distribution<float> r(-min, max);
         for (int i = 0; i < col; ++i) {
@@ -33,7 +29,7 @@ namespace sv4d {
     }
 
     sv4d::Vector Vector::sigmoid() {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         for (int i = 0; i < col; ++i) {
             outputVector.data[i] += sv4d::utils::operation::sigmoid(data[i]);
         }
@@ -41,7 +37,7 @@ namespace sv4d {
     }
 
     sv4d::Vector Vector::softmax(float temperature) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         float max = 0.0;
         for (int i = 0; i < col; ++i) {
             auto logit = data[i] / temperature;
@@ -60,7 +56,7 @@ namespace sv4d {
     }
 
     sv4d::Vector Vector::clipByValue(float min, float max) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         for (int i = 0; i < col; ++i) {
             if (data[i] > max) {
                 outputVector.data[i] = max;
@@ -73,6 +69,10 @@ namespace sv4d {
         return outputVector;
     }
 
+    std::vector<float>& sv4d::Vector::getData() {
+        return data;
+    }
+
     float& sv4d::Vector::operator[](int idx) {
         return data[idx];
     }
@@ -82,84 +82,84 @@ namespace sv4d {
     }
 
     sv4d::Vector sv4d::Vector::operator+(const sv4d::Vector& vector) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         outputVector += vector;
         return outputVector;
     }
 
     sv4d::Vector sv4d::Vector::operator-(const sv4d::Vector& vector) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         outputVector -= vector;
         return outputVector;
     }
 
     sv4d::Vector sv4d::Vector::operator*(const sv4d::Vector& vector) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         outputVector *= vector;
         return outputVector;
     }
 
     sv4d::Vector sv4d::Vector::operator/(const sv4d::Vector& vector) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         outputVector /= vector;
         return outputVector;
     }
 
     sv4d::Vector sv4d::Vector::operator+(const float value) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         outputVector += value;
         return outputVector;
     }
     
     sv4d::Vector sv4d::Vector::operator-(const float value) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         outputVector -= value;
         return outputVector;
     }
 
     sv4d::Vector sv4d::Vector::operator*(const float value) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         outputVector *= value;
         return outputVector;
     }
 
     sv4d::Vector sv4d::Vector::operator/(const float value) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         outputVector /= value;
         return outputVector;
     }
 
     sv4d::Vector sv4d::Vector::operator+(const int value) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         outputVector += value;
         return outputVector;
     }
 
     sv4d::Vector sv4d::Vector::operator-(const int value) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         outputVector -= value;
         return outputVector;
     }
 
     sv4d::Vector sv4d::Vector::operator*(const int value) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         outputVector *= value;
         return outputVector;
     }
 
     sv4d::Vector sv4d::Vector::operator/(const int value) {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         outputVector /= value;
         return outputVector;
@@ -250,13 +250,13 @@ namespace sv4d {
     }
 
     sv4d::Vector sv4d::Vector::operator+() {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector += *this;
         return outputVector;
     }
 
     sv4d::Vector sv4d::Vector::operator-() {
-        sv4d::Vector outputVector = sv4d::Vector(col);
+        sv4d::Vector outputVector(col);
         outputVector -= *this;
         return outputVector;
     }
