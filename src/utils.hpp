@@ -79,14 +79,23 @@ namespace sv4d {
 
         namespace operation {
 
-            float sigmoid(float x);
+            const int SigmoidTableSize = 1024;
+            const int MaxSigmoid = 8.0;
 
             std::vector<float> computeSigmoidTable();
 
-            const int SigmoidTableSize = 1024;
-            const int MaxSigmoid = 8.0;
             const std::vector<float> sigmoidTable = computeSigmoidTable();
-            
+
+            inline float sigmoid(float x) {
+                if (x < -MaxSigmoid) {
+                    return 0.0;
+                } else if (x > MaxSigmoid) {
+                    return 1.0;
+                } else {
+                    int i = int((x + MaxSigmoid) * SigmoidTableSize / MaxSigmoid / 2);
+                    return sigmoidTable[i];
+                }
+            }
         }
 
     }

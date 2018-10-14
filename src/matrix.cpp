@@ -26,12 +26,4 @@ namespace sv4d {
         }
     }
 
-    sv4d::Vector& Matrix::operator[](int idx) {
-        return data[idx];
-    }
-
-    const sv4d::Vector& Matrix::operator[](int idx) const {
-        return data[idx];
-    }
-
 }

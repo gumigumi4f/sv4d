@@ -22,17 +22,6 @@ namespace sv4d {
                 return table;
             }
 
-            float sigmoid(float x) {
-                if (x < -MaxSigmoid) {
-                    return 0.0;
-                } else if (x > MaxSigmoid) {
-                    return 1.0;
-                } else {
-                    int i = int((x + MaxSigmoid) * SigmoidTableSize / MaxSigmoid / 2);
-                    return sigmoidTable[i];
-                }
-            }
-
         }
 
     }
