@@ -140,8 +140,10 @@ namespace sv4d {
 
         // cache
         auto documentCache = std::vector<std::vector<int>>();
-        auto outputWidxCandidateCache = std::vector<int>(windowSize * 2);
+        auto outputWidxCandidateCache = std::vector<int>();
+        outputWidxCandidateCache.reserve(windowSize * 2);
         auto subSampledCache = std::vector<bool>();
+        subSampledCache.reserve(4096);
         sv4d::Vector documentVectorCache = sv4d::Vector(embeddingLayerSize);
         sv4d::Vector sentenceVectorCache = sv4d::Vector(embeddingLayerSize);
         sv4d::Vector contextVectorCache = sv4d::Vector(embeddingLayerSize);
@@ -170,72 +172,61 @@ namespace sv4d {
                     int documentNum = 0;
                     for (auto& sentence : documentCache) {
                         for (auto widx : sentence) {
-                            documentNum += 1;
                             sv4d::Vector& embeddingInVector = embeddingInWeight[widx];
                             documentVectorCache += embeddingInVector;
                         }
+                        documentNum += sentence.size();
                     }
                     documentVectorCache /= documentNum;
 
                     for (auto& sentence : documentCache) {
-                        auto sentenceSize = sentence.size();
+                        int sentenceNum = sentence.size();
                         subSampledCache.clear();
 
                         // sentence vector
                         sentenceVectorCache.setZero();
-                        int sentenceNum = 0;
                         for (auto widx : sentence) {
-                            sentenceNum += 1;
                             sv4d::Vector& embeddingInVector = embeddingInWeight[widx];
                             sentenceVectorCache += embeddingInVector;
                             subSampledCache.push_back(subsamplingFactorTable[widx] < rand(mt));
                         }
                         sentenceVectorCache /= sentenceNum;
 
-                        for (int pos = 0; pos < sentenceSize; ++pos) {
+                        for (int pos = 0; pos < sentenceNum; ++pos) {
                             if (subSampledCache[pos]) {
                                 continue;
                             }
 
                             // context vector
                             contextVectorCache.setZero();
-                            int contextNum = 0;
                             int minPos = pos - windowSize < 0 ? 0 : pos - windowSize;
-                            int maxPos = pos + windowSize >= sentenceSize ? sentenceSize - 1 : pos + windowSize;
+                            int maxPos = pos + windowSize >= sentenceNum ? sentenceNum - 1 : pos + windowSize;
                             for (int pos2 = minPos; pos2 <= maxPos; ++pos2) {
                                 if (pos == pos2) {
                                     continue;
                                 }
                                 sv4d::Vector& embeddingInVector = embeddingInWeight[sentence[pos2]];
                                 contextVectorCache += embeddingInVector;
-                                contextNum += 1;
                             }
-                            contextVectorCache /= contextNum;
+                            contextVectorCache /= (maxPos - minPos - 1);
 
                             // output widx
                             outputWidxCandidateCache.clear();
                             int reducedWindowSize = windowSize - rndwindow(mt);
-                            int count = reducedWindowSize;
-                            for (int pos2 = pos - 1; pos2 >= 0; --pos2) {
+                            for (int pos2 = pos - 1, count = reducedWindowSize; pos2 >= 0 && count != 0; --pos2) {
                                 if (subSampledCache[pos2]) {
                                     continue;
                                 }
                                 outputWidxCandidateCache.push_back(sentence[pos2]);
                                 count -= 1;
-                                if (count == 0) {
-                                    break;
-                                }
                             }
-                            count = reducedWindowSize;
-                            for (int pos2 = pos + 1; pos2 < sentenceSize; ++pos2) {
-                                if (outputWidxCandidateCache[pos2]) {
+                            ;
+                            for (int pos2 = pos + 1, count = reducedWindowSize; pos2 < sentenceNum && count != 0; ++pos2) {
+                                if (subSampledCache[pos2]) {
                                     continue;
                                 }
                                 outputWidxCandidateCache.push_back(sentence[pos2]);
                                 count -= 1;
-                                if (count == 0) {
-                                    break;
-                                }
                             }
 
                             if (outputWidxCandidateCache.size() == 0) {
@@ -257,6 +248,7 @@ namespace sv4d {
                             // training
                             // % means dot operation
                             {
+                                sv4d::Vector embeddingInBufVector = sv4d::Vector(embeddingLayerSize);
                                 sv4d::Vector embeddingOutBufVector = sv4d::Vector(embeddingLayerSize);
 
                                 sv4d::SynsetData& synsetData = vocab.widx2lidxs[inputWidx];
@@ -266,6 +258,7 @@ namespace sv4d {
 
                                 // sense training
                                 if (synsetData.validPos.size() != 0) {
+                                    // pos selection (random)
                                     int targetPos = synsetData.validPos[mt() % synsetData.validPos.size()];
                                     auto& synsetLemmaIndices = synsetData.synsetLemmaIndices[targetPos];
 
@@ -279,20 +272,21 @@ namespace sv4d {
                                     auto senseSelectionProb = senseSelectionLogits.softmax(temperature);
 
                                     sv4d::Vector rewardLogits = sv4d::Vector(senseNum);
+                                    sv4d::Vector embeddingInBufVector = sv4d::Vector(embeddingLayerSize);
 
                                     // embedding
                                     for (int i = 0; i < senseNum; ++i) {
-                                        sv4d::Vector embeddingInBufVector = sv4d::Vector(embeddingLayerSize);
+                                        embeddingInBufVector.setZero();
 
                                         auto senseWeight = senseSelectionProb[i];
 
                                         auto sidx = vocab.lidx2sidx[synsetLemmaIndices[i]];
                                         sv4d::SynsetDictPair synsetDictPair;
                                         if (vocab.synsetDictPair.find(sidx) == vocab.synsetDictPair.end()) {
-                                            synsetDictPair = sv4d::SynsetDictPair();
-                                        } else {
-                                            synsetDictPair = vocab.synsetDictPair[sidx];
+                                            break;
                                         }
+                                        
+                                        synsetDictPair = vocab.synsetDictPair[sidx];
                                         auto& dictPair = synsetDictPair.dictPair;
 
                                         sv4d::Vector& vSynsetIn = embeddingInWeight[sidx];
@@ -328,7 +322,7 @@ namespace sv4d {
                                                 continue;
                                             }
                                             if (std::find(dictPair.begin(), dictPair.end(), sample) != dictPair.end()) {
-                                                break;
+                                                continue;
                                             } 
                                             sv4d::Vector& vSample = embeddingOutWeight[sample];
                                             float dot = vSynsetIn % vSample;
@@ -365,13 +359,14 @@ namespace sv4d {
                                     // sense selection (update)
                                     auto rewardProb = rewardLogits.softmax(1.0);
                                     rewardProb.clipByValue(0.1, 0.9);
+
+                                    // Update sense selection weight.
+                                    //   forward: x = v_feature' * v_sense_selection + v_sense_bias
+                                    //            l = z * log(sigmoid(x)) + (1 - z) * log(sigmoid(-x))
+                                    //   backward: dl/dx = g = z * sigmoid(-x) + (1 - z) * -sigmoid(x)
+                                    //             dl/d(v_sense_selection) = v_feature' * g
+                                    //             dl/d(v_sense_bias) = g
                                     for (int i = 0; i < senseNum; ++i) {
-                                        // Update sense selection weight.
-                                        //   forward: x = v_feature' * v_sense_selection + v_sense_bias
-                                        //            l = z * log(sigmoid(x)) + (1 - z) * log(sigmoid(-x))
-                                        //   backward: dl/dx = g = z * sigmoid(-x) + (1 - z) * -sigmoid(x)
-                                        //             dl/d(v_sense_selection) = v_feature' * g
-                                        //             dl/d(v_sense_bias) = g
                                         int lidx = synsetLemmaIndices[i];
                                         float g = rewardProb[i] * sv4d::utils::operation::sigmoid(-senseSelectionLogits[i])
                                                   + (1.0 - rewardProb[i]) * -sv4d::utils::operation::sigmoid(senseSelectionLogits[i]);
@@ -384,7 +379,7 @@ namespace sv4d {
 
                                 // word training
                                 {
-                                    sv4d::Vector embeddingInBufVector = sv4d::Vector(embeddingLayerSize);
+                                    embeddingInBufVector.setZero();
 
                                     auto wsidx = vocab.lidx2sidx[synsetData.wordLemmaIndex];
 
@@ -433,36 +428,37 @@ namespace sv4d {
                             }
                         }
 
-                        trainedWordCount += sentenceSize;
+                        trainedWordCount += sentenceNum;
                     }
 
                     if (fin.tellg() > fileSize / threadNum * (threadId + 1)) {
                         break;
                     }
 
-                    lr = initialLearningRate * (1 - trainedWordCount / (double)(epochs * vocab.totalWordsNum + 1));
+                    float rate = (1 - trainedWordCount / (float)(epochs * vocab.totalWordsNum + 1));
+                    lr = initialLearningRate * rate;
                     if (lr < minLearningRate) {
                         lr = minLearningRate;
                     }
-                    temperature = initialTemperature * (1 - trainedWordCount / (double)(epochs * vocab.totalWordsNum + 1));
+                    temperature = initialTemperature * rate;
                     if (temperature < minTemperature) {
                         temperature = minTemperature;
                     }
-                    betaDict = initialBetaDict * (1 - trainedWordCount / (double)(epochs * vocab.totalWordsNum + 1));
+                    betaDict = initialBetaDict * rate;
                     if (betaDict < minBetaDict) {
                         betaDict = minBetaDict;
                     }
-                    betaReward = initialBetaReward * (1 - trainedWordCount / (double)(epochs * vocab.totalWordsNum + 1));
+                    betaReward = initialBetaReward * rate;
                     if (betaReward < minBetaReward) {
                         betaReward = minBetaReward;
                     }
 
                     // print log
                     auto now = std::chrono::system_clock::now();
-                    auto progress = trainedWordCount / (double)(epochs * vocab.totalWordsNum + 1) * 100.0;
+                    auto progress = trainedWordCount / (float)(epochs * vocab.totalWordsNum + 1) * 100.0;
                     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
                     auto speed = trainedWordCount / ((elapsed + 1) / 1000.0) / (1000.0 * threadNum);
-                    auto eta = ((double)(epochs * vocab.totalWordsNum) / (trainedWordCount + 1) * elapsed - elapsed) / 60000.0;
+                    auto eta = ((float)(epochs * vocab.totalWordsNum) / (trainedWordCount + 1) * elapsed - elapsed) / 60000.0;
                     printf("%cAlpha: %f  Progress: %.2f%%  Words/thread/sec: %.2fk  Remaining: %.2fm  ", 13, lr, progress, speed, eta);
                     fflush(stdout);
                 } else {
@@ -663,7 +659,6 @@ namespace sv4d {
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
         auto lemmaVocabSize = std::stoi(sizes[0]);
-        auto embeddingLayerSize = std::stoi(sizes[1]);
         for (int i = 0; i < lemmaVocabSize; ++i) {
             std::getline(fin, linebuf, ' ');
             auto lemma = sv4d::utils::string::trim(linebuf);

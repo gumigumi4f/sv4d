@@ -204,15 +204,7 @@ namespace sv4d {
         synsetVocabSize = synsetVocab.size();
         totalWordsNum = std::accumulate(wordFreq.begin(), wordFreq.end(), 0);
 
-        printf("\n");
-        printf("LemmaVocabSize: %d  SynsetVocabSize: %d  WordVocabSize: %d  TotalWordsNum: %d  \n", lemmaVocabSize, synsetVocabSize, wordVocabSize, totalWordsNum);
-
-        // For Debug
-        printf("%d %d %d %d\n", lemmaVocab.size(), lidx2Lemma.size(), lemmaProb.size(), lidx2sidx.size());
-        printf("%d %d %d\n", wordVocabSize, wordFreq.size(), widx2lidxs.size());
-        printf("%d %d\n", synsetVocab.size(), sidx2Synset.size());
-        //std::string s;
-        //std::cin >> s; 
+        printf("LemmaVocabSize: %d  SynsetVocabSize: %d  WordVocabSize: %d  TotalWordsNum: %ld  \n", lemmaVocabSize, synsetVocabSize, wordVocabSize, totalWordsNum);
     }
 
     void Vocab::save(const std::string& filepath) {
@@ -329,11 +321,6 @@ namespace sv4d {
                 }
             }
         }
-
-        // For Debug
-        printf("%d %d %d %d\n", lemmaVocab.size(), lidx2Lemma.size(), lemmaProb.size(), lidx2sidx.size());
-        printf("%d %d %d\n", wordVocabSize, wordFreq.size(), widx2lidxs.size());
-        printf("%d %d\n", synsetVocab.size(), sidx2Synset.size());
     }
 
 }
