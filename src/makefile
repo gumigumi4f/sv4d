@@ -1,6 +1,6 @@
 BINDIR=../bin
 
-CXX = g++
+CXX = c++
 CXXFLAGS = -std=c++11 -pthread -Wall -Wextra -Wno-unused-result
 OBJS = $(BINDIR)/utils.o $(BINDIR)/vector.o $(BINDIR)/matrix.o $(BINDIR)/options.o $(BINDIR)/vocab.o $(BINDIR)/model.o
 
