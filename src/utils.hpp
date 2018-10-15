@@ -46,11 +46,11 @@ namespace sv4d {
             }
 
             inline std::vector<float> strvec_to_floatvec(const std::vector<std::string>& strvec) {
-                auto intvec = std::vector<float>();
+                auto floatvec = std::vector<float>();
                 for (auto str : strvec) {
-                    intvec.push_back(std::stof(str));
+                    floatvec.push_back(std::stof(str));
                 }
-                return intvec;
+                return floatvec;
             }
 
             inline std::vector<std::string> floatvec_to_strvec(const std::vector<float>& intvec) {

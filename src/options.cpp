@@ -30,7 +30,9 @@ namespace sv4d {
         initialBetaDict = 0.8;
         minBetaDict = 0.35;
         initialBetaReward = 0.8;
-        minBetaReward = 0.8;
+        minBetaReward = 0.35;
+
+        binary = true;
     }
 
     void Options::parse(const std::vector<std::string>& args) {
@@ -45,6 +47,9 @@ namespace sv4d {
                     exit(EXIT_FAILURE);
                 } else if (args[i] == "-model_dir") {
                     modelDir = std::string(args.at(i + 1));
+                    if (modelDir.back() != '/') {
+                        modelDir += "/";
+                    } 
                 } else if (args[i] == "-synset_data_file") {
                     synsetDataFile = std::string(args.at(i + 1));
                 } else if (args[i] == "-training_corpus") {
@@ -83,6 +88,8 @@ namespace sv4d {
                     initialBetaReward = std::stof(args.at(i + 1));
                 } else if (args[i] == "-min_beta_reward") {
                     minBetaReward = std::stof(args.at(i + 1));
+                } else if (args[i] == "-binary") {
+                    binary = (std::stoi(args.at(i + 1)) == 1);
                 }
             } catch (std::out_of_range) {
                 throw std::runtime_error(args[i] + " is missing an argument");

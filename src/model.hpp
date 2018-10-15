@@ -50,14 +50,14 @@ namespace sv4d {
             void initialize();
             void training();
             void trainingThread(const int threadId);
-            void saveEmbeddingInWeight(const std::string& filepath);
-            void loadEmbeddingInWeight(const std::string& filepath);
-            void saveEmbeddingOutWeight(const std::string& filepath);
-            void loadEmbeddingOutWeight(const std::string& filepath);
-            void saveSenseSelectionOutWeight(const std::string& filepath);
-            void loadSenseSelectionOutWeight(const std::string& filepath);
-            void saveSenseSelectionBiasWeight(const std::string& filepath);
-            void loadSenseSelectionBiasWeight(const std::string& filepath);
+            void saveEmbeddingInWeight(const std::string& filepath, bool binary);
+            void loadEmbeddingInWeight(const std::string& filepath, bool binary);
+            void saveEmbeddingOutWeight(const std::string& filepath, bool binary);
+            void loadEmbeddingOutWeight(const std::string& filepath, bool binary);
+            void saveSenseSelectionOutWeight(const std::string& filepath, bool binary);
+            void loadSenseSelectionOutWeight(const std::string& filepath, bool binary);
+            void saveSenseSelectionBiasWeight(const std::string& filepath, bool binary);
+            void loadSenseSelectionBiasWeight(const std::string& filepath, bool binary);
 
         private:
             static const int UnigramTableSize = 1e8;
@@ -69,6 +69,11 @@ namespace sv4d {
             void initializeUnigramTable();
             void initializeSubsamplingFactorTable();
             void initializeFileSize();
+
+            void saveMatrix(const sv4d::Matrix& matrix, const std::string& filepath, bool binary);
+            void loadMatrix(sv4d::Matrix& matrix, const std::string& filepath, bool binary);
+            void saveVector(const sv4d::Vector& vector, const std::string& filepath, bool binary);
+            void loadVector(sv4d::Vector& vector, const std::string& filepath, bool binary);
     };
 
 }

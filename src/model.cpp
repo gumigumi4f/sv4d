@@ -153,7 +153,8 @@ namespace sv4d {
             // seek to head of document
             while (true) {
                 std::getline(fin, linebuf);
-                if (sv4d::utils::string::trim(linebuf) == "</doc>") {
+                if (sv4d::utils::string::trim(linebuf) == "<doc>") {
+                    documentCache.clear();
                     break;
                 }
             }
@@ -292,7 +293,7 @@ namespace sv4d {
                                         } else {
                                             synsetDictPair = vocab.synsetDictPair[sidx];
                                         }
-                                        auto& dictPair = vocab.synsetDictPair[sidx].dictPair;
+                                        auto& dictPair = synsetDictPair.dictPair;
 
                                         sv4d::Vector& vSynsetIn = embeddingInWeight[sidx];
 
@@ -443,13 +444,17 @@ namespace sv4d {
                     if (lr < minLearningRate) {
                         lr = minLearningRate;
                     }
+                    temperature = initialTemperature * (1 - trainedWordCount / (double)(epochs * vocab.totalWordsNum + 1));
+                    if (temperature < minTemperature) {
+                        temperature = minTemperature;
+                    }
                     betaDict = initialBetaDict * (1 - trainedWordCount / (double)(epochs * vocab.totalWordsNum + 1));
-                    if (temperature < minBetaDict) {
-                        temperature = minBetaDict;
+                    if (betaDict < minBetaDict) {
+                        betaDict = minBetaDict;
                     }
                     betaReward = initialBetaReward * (1 - trainedWordCount / (double)(epochs * vocab.totalWordsNum + 1));
-                    if (temperature < minBetaReward) {
-                        temperature = minBetaReward;
+                    if (betaReward < minBetaReward) {
+                        betaReward = minBetaReward;
                     }
 
                     // print log
@@ -485,129 +490,194 @@ namespace sv4d {
         }
     }
 
-    void Model::saveEmbeddingInWeight(const std::string& filepath) {
-        std::ofstream fout(filepath);
-
+    void Model::saveEmbeddingInWeight(const std::string& filepath, bool binary) {
+        std::ofstream fout(filepath, std::ios::out | std::ios::binary | std::ios::trunc);
         fout << vocab.synsetVocabSize << " " << embeddingLayerSize << "\n";
         for (int sidx = 0; sidx < vocab.synsetVocabSize; ++sidx) {
             auto synset = vocab.sidx2Synset[sidx];
-            auto strvec = sv4d::utils::string::join(sv4d::utils::string::floatvec_to_strvec(embeddingInWeight[sidx].getData()), ' ');
-            fout << synset << " " << strvec << "\n";
+            fout << synset << " ";
+            auto& vector = embeddingInWeight[sidx].getData();
+            if (binary) {
+                for (int i = 0; i < embeddingLayerSize; ++i) {
+                    fout.write((char *)&vector[i], sizeof(float));
+                }
+            } else {
+                fout << sv4d::utils::string::join(sv4d::utils::string::floatvec_to_strvec(vector), ' ');
+            }
+            fout << "\n";
         }
-
         fout.close();
     }
 
-    void Model::loadEmbeddingInWeight(const std::string& filepath) {
+    void Model::loadEmbeddingInWeight(const std::string& filepath, bool binary) {
         std::string linebuf;
-        std::ifstream fin(filepath);
-
+        std::ifstream fin(filepath, std::ios::in | std::ios::binary);
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
         auto synsetVocabSize = std::stoi(sizes[0]);
-        embeddingLayerSize = std::stoi(sizes[1]);
-
+        auto embeddingLayerSize = std::stoi(sizes[1]);
         for (int i = 0; i < synsetVocabSize; ++i) {
-            std::getline(fin, linebuf);
-            auto data = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
-            if (vocab.synsetVocab.find(data[0]) == vocab.synsetVocab.end()) {
+            std::getline(fin, linebuf, ' ');
+            auto synset = sv4d::utils::string::trim(linebuf);
+            if (vocab.synsetVocab.find(synset) == vocab.synsetVocab.end()) {
                 continue;
             }
-            auto strvec = std::vector<std::string>(data.begin() + 1, data.end());
-            embeddingInWeight[vocab.synsetVocab[data[0]]].getData() = sv4d::utils::string::strvec_to_floatvec(strvec);
+            auto& vector = embeddingInWeight[vocab.synsetVocab[synset]];
+            if (binary) {
+                float value;
+                for (int i = 0; i < embeddingLayerSize; ++i) {
+                    fin.read((char *)&value, sizeof(float));
+                    vector[i] = value;
+                }
+                fin.seekg(sizeof(char), fin.cur);
+            } else {
+                std::getline(fin, linebuf, '\n');
+                auto strvec = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
+                for (int i = 0; i < embeddingLayerSize; ++i) {
+                    vector[i] = std::stof(strvec[i]);
+                }
+            }
         }
     }
 
-    void Model::saveEmbeddingOutWeight(const std::string& filepath) {
-        std::ofstream fout(filepath);
-
+    void Model::saveEmbeddingOutWeight(const std::string& filepath, bool binary) {
+        std::ofstream fout(filepath, std::ios::out | std::ios::binary | std::ios::trunc);
         fout << vocab.wordVocabSize << " " << embeddingLayerSize << "\n";
         for (int widx = 0; widx < vocab.wordVocabSize; ++widx) {
             auto word = vocab.sidx2Synset[widx];
-            auto strvec = sv4d::utils::string::join(sv4d::utils::string::floatvec_to_strvec(embeddingOutWeight[widx].getData()), ' ');
-            fout << word << " " << strvec << "\n";
+            fout << word << " ";
+            auto& vector = embeddingOutWeight[widx].getData();
+            if (binary) {
+                for (int i = 0; i < embeddingLayerSize; ++i) {
+                    fout.write((char *)&vector[i], sizeof(float));
+                }
+            } else {
+                fout << sv4d::utils::string::join(sv4d::utils::string::floatvec_to_strvec(vector), ' ');
+            }
+            fout << "\n";
         }
-
         fout.close();
     }
 
-    void Model::loadEmbeddingOutWeight(const std::string& filepath) {
+    void Model::loadEmbeddingOutWeight(const std::string& filepath, bool binary) {
         std::string linebuf;
-        std::ifstream fin(filepath);
-
+        std::ifstream fin(filepath, std::ios::in | std::ios::binary);
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
         auto wordVocabSize = std::stoi(sizes[0]);
-        embeddingLayerSize = std::stoi(sizes[1]);
-
+        auto embeddingLayerSize = std::stoi(sizes[1]);
         for (int i = 0; i < wordVocabSize; ++i) {
-            std::getline(fin, linebuf);
-            auto data = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
-            if (vocab.synsetVocab.find(data[0]) == vocab.synsetVocab.end()) {
+            std::getline(fin, linebuf, ' ');
+            auto word = sv4d::utils::string::trim(linebuf);
+            if (vocab.synsetVocab.find(word) == vocab.synsetVocab.end()) {
                 continue;
             }
-            auto strvec = std::vector<std::string>(data.begin() + 1, data.end());
-            embeddingOutWeight[vocab.synsetVocab[data[0]]].getData() = sv4d::utils::string::strvec_to_floatvec(strvec);
+            auto& vector = embeddingOutWeight[vocab.synsetVocab[word]];
+            if (binary) {
+                float value;
+                for (int i = 0; i < embeddingLayerSize; ++i) {
+                    fin.read((char *)&value, sizeof(float));
+                    vector[i] = value;
+                }
+                fin.seekg(sizeof(char), fin.cur);
+            } else {
+                std::getline(fin, linebuf, '\n');
+                auto strvec = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
+                for (int i = 0; i < embeddingLayerSize; ++i) {
+                    vector[i] = std::stof(strvec[i]);
+                }
+            }
         }
     }
 
-    void Model::saveSenseSelectionOutWeight(const std::string& filepath) {
-        std::ofstream fout(filepath);
-
-        fout << vocab.lemmaVocabSize << " " << embeddingLayerSize * 3 << "\n";
+    void Model::saveSenseSelectionOutWeight(const std::string& filepath, bool binary) {
+        std::ofstream fout(filepath, std::ios::out | std::ios::binary | std::ios::trunc);
+        fout << vocab.lemmaVocabSize << " " << (embeddingLayerSize * 3) << "\n";
         for (int lidx = 0; lidx < vocab.lemmaVocabSize; ++lidx) {
             auto lemma = vocab.lidx2Lemma[lidx];
-            auto strvec = sv4d::utils::string::join(sv4d::utils::string::floatvec_to_strvec(senseSelectionOutWeight[lidx].getData()), ' ');
-            fout << lemma << " " << strvec << "\n";
+            fout << lemma << " ";
+            auto& vector = senseSelectionOutWeight[lidx].getData();
+            if (binary) {
+                for (int i = 0; i < embeddingLayerSize * 3; ++i) {
+                    fout.write((char *)&vector[i], sizeof(float));
+                }
+            } else {
+                fout << sv4d::utils::string::join(sv4d::utils::string::floatvec_to_strvec(vector), ' ');
+            }
+            fout << "\n";
         }
-
         fout.close();
     }
 
-    void Model::loadSenseSelectionOutWeight(const std::string& filepath) {
+    void Model::loadSenseSelectionOutWeight(const std::string& filepath, bool binary) {
         std::string linebuf;
-        std::ifstream fin(filepath);
-
+        std::ifstream fin(filepath, std::ios::in | std::ios::binary);
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
         auto lemmaVocabSize = std::stoi(sizes[0]);
-        embeddingLayerSize = std::stoi(sizes[1]);
-
+        auto embeddingLayerSize = std::stoi(sizes[1]);
         for (int i = 0; i < lemmaVocabSize; ++i) {
-            std::getline(fin, linebuf);
-            auto data = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
-            if (vocab.lemmaVocab.find(data[0]) == vocab.lemmaVocab.end()) {
+            std::getline(fin, linebuf, ' ');
+            auto lemma = sv4d::utils::string::trim(linebuf);
+            if (vocab.lemmaVocab.find(lemma) == vocab.lemmaVocab.end()) {
                 continue;
             }
-            auto strvec = std::vector<std::string>(data.begin() + 1, data.end());
-            embeddingOutWeight[vocab.lemmaVocab[data[0]]].getData() = sv4d::utils::string::strvec_to_floatvec(strvec);
+            auto& vector = senseSelectionOutWeight[vocab.lemmaVocab[lemma]];
+            if (binary) {
+                float value;
+                for (int i = 0; i < embeddingLayerSize; ++i) {
+                    fin.read((char *)&value, sizeof(float));
+                    vector[i] = value;
+                }
+                fin.seekg(sizeof(char), fin.cur);
+            } else {
+                std::getline(fin, linebuf, '\n');
+                auto strvec = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
+                for (int i = 0; i < embeddingLayerSize; ++i) {
+                    vector[i] = std::stof(strvec[i]);
+                }
+            }
         }
     }
 
-    void Model::saveSenseSelectionBiasWeight(const std::string& filepath) {
-        std::ofstream fout(filepath);
-
+    void Model::saveSenseSelectionBiasWeight(const std::string& filepath, bool binary) {
+        std::ofstream fout(filepath, std::ios::out | std::ios::binary | std::ios::trunc);
         fout << vocab.lemmaVocabSize << " " << 1 << "\n";
         for (int lidx = 0; lidx < vocab.lemmaVocabSize; ++lidx) {
             auto lemma = vocab.lidx2Lemma[lidx];
-            fout << lemma << " " << senseSelectionOutBias[lidx] << "\n";
+            fout << lemma << " ";
+            auto& value = senseSelectionOutBias[lidx];
+            if (binary) {
+                fout.write((char *)&value, sizeof(float));
+            } else {
+                fout << value;
+            }
+            fout << "\n";
         }
-
         fout.close();
     }
 
-    void Model::loadSenseSelectionBiasWeight(const std::string& filepath) {
+    void Model::loadSenseSelectionBiasWeight(const std::string& filepath, bool binary) {
         std::string linebuf;
-        std::ifstream fin(filepath);
-
+        std::ifstream fin(filepath, std::ios::in | std::ios::binary);
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
         auto lemmaVocabSize = std::stoi(sizes[0]);
-
+        auto embeddingLayerSize = std::stoi(sizes[1]);
         for (int i = 0; i < lemmaVocabSize; ++i) {
-            std::getline(fin, linebuf);
-            auto data = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
-            senseSelectionOutBias.getData()[i] = std::stof(data[1]);
+            std::getline(fin, linebuf, ' ');
+            auto lemma = sv4d::utils::string::trim(linebuf);
+            if (vocab.lemmaVocab.find(lemma) == vocab.lemmaVocab.end()) {
+                continue;
+            }
+            auto& value = senseSelectionOutBias[vocab.lemmaVocab[lemma]];
+            if (binary) {
+                fin.read((char *)&value, sizeof(float));
+                fin.seekg(sizeof(char), fin.cur);
+            } else {
+                std::getline(fin, linebuf, '\n');
+                value = std::stof(sv4d::utils::string::trim(linebuf));
+            }
         }
     }
 

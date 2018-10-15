@@ -102,7 +102,6 @@ namespace sv4d {
         std::ifstream synsetfin(opt.synsetDataFile);
         while (std::getline(synsetfin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);
-            printf("%s\n", linebuf.c_str());
             auto data = sv4d::utils::string::split(linebuf, ' ');
             auto lemmaData = sv4d::utils::string::split(data[0], '|');
 
@@ -178,22 +177,22 @@ namespace sv4d {
             auto sidx = synsetVocab[synset];
             lidx2sidx.push_back(sidx);
             if (pos == "n") {
-                widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Noun].push_back(sidx);
+                widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Noun].push_back(lidx);
                 if (std::find(widx2lidxs[widx].validPos.begin(), widx2lidxs[widx].validPos.end(), (int)sv4d::Pos::Noun) == widx2lidxs[widx].validPos.end()) {
                     widx2lidxs[widx].validPos.push_back(sv4d::Pos::Noun);
                 }
             } else if (pos == "v") {
-                widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Verb].push_back(sidx);
+                widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Verb].push_back(lidx);
                 if (std::find(widx2lidxs[widx].validPos.begin(), widx2lidxs[widx].validPos.end(), (int)sv4d::Pos::Verb) == widx2lidxs[widx].validPos.end()) {
                     widx2lidxs[widx].validPos.push_back(sv4d::Pos::Verb);
                 }
             } else if (pos == "a") {
-                widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Adjective].push_back(sidx);
+                widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Adjective].push_back(lidx);
                 if (std::find(widx2lidxs[widx].validPos.begin(), widx2lidxs[widx].validPos.end(), (int)sv4d::Pos::Adjective) == widx2lidxs[widx].validPos.end()) {
                     widx2lidxs[widx].validPos.push_back(sv4d::Pos::Adjective);
                 }
             } else if (pos == "r") {
-                widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Adverb].push_back(sidx);
+                widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Adverb].push_back(lidx);
                 if (std::find(widx2lidxs[widx].validPos.begin(), widx2lidxs[widx].validPos.end(), (int)sv4d::Pos::Adverb) == widx2lidxs[widx].validPos.end()) {
                     widx2lidxs[widx].validPos.push_back(sv4d::Pos::Adverb);
                 }
@@ -308,22 +307,22 @@ namespace sv4d {
                 }
                 
                 if (pos == "n") {
-                    widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Noun].push_back(sidx);
+                    widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Noun].push_back(lidx);
                     if (std::find(widx2lidxs[widx].validPos.begin(), widx2lidxs[widx].validPos.end(), (int)sv4d::Pos::Noun) == widx2lidxs[widx].validPos.end()) {
                         widx2lidxs[widx].validPos.push_back(sv4d::Pos::Noun);
                     }
                 } else if (pos == "v") {
-                    widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Verb].push_back(sidx);
+                    widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Verb].push_back(lidx);
                     if (std::find(widx2lidxs[widx].validPos.begin(), widx2lidxs[widx].validPos.end(), (int)sv4d::Pos::Verb) == widx2lidxs[widx].validPos.end()) {
                         widx2lidxs[widx].validPos.push_back(sv4d::Pos::Verb);
                     }
                 } else if (pos == "a") {
-                    widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Adjective].push_back(sidx);
+                    widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Adjective].push_back(lidx);
                     if (std::find(widx2lidxs[widx].validPos.begin(), widx2lidxs[widx].validPos.end(), (int)sv4d::Pos::Adjective) == widx2lidxs[widx].validPos.end()) {
                         widx2lidxs[widx].validPos.push_back(sv4d::Pos::Adjective);
                     }
                 } else if (pos == "r") {
-                    widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Adverb].push_back(sidx);
+                    widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Adverb].push_back(lidx);
                     if (std::find(widx2lidxs[widx].validPos.begin(), widx2lidxs[widx].validPos.end(), (int)sv4d::Pos::Adverb) == widx2lidxs[widx].validPos.end()) {
                         widx2lidxs[widx].validPos.push_back(sv4d::Pos::Adverb);
                     }

@@ -32,6 +32,8 @@ namespace sv4d {
             float initialBetaReward;
             float minBetaReward;
 
+            bool binary;
+
             void parse(const std::vector<std::string>& args);
     };
 
