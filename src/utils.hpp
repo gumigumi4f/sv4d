@@ -39,7 +39,7 @@ namespace sv4d {
 
             inline std::vector<std::string> intvec_to_strvec(const std::vector<int>& intvec) {
                 auto strvec = std::vector<std::string>();
-                for (auto num : intvec) {
+                for (int num : intvec) {
                     strvec.push_back(std::to_string(num));
                 }
                 return strvec;
@@ -55,7 +55,7 @@ namespace sv4d {
 
             inline std::vector<std::string> floatvec_to_strvec(const std::vector<float>& intvec) {
                 auto strvec = std::vector<std::string>();
-                for (auto num : intvec) {
+                for (int num : intvec) {
                     strvec.push_back(std::to_string(num));
                 }
                 return strvec;

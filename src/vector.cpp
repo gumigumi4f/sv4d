@@ -41,7 +41,7 @@ namespace sv4d {
         sv4d::Vector outputVector(col);
         float max = 0.0;
         for (int i = 0; i < col; ++i) {
-            auto logit = data[i] / temperature;
+            float logit = data[i] / temperature;
             outputVector.data[i] = logit;
             max = std::max(max, logit);
         }

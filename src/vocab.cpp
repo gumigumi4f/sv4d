@@ -75,14 +75,14 @@ namespace sv4d {
         std::sort(sortedWordStats.begin(), sortedWordStats.end(), [](const std::pair<std::string, int> & a, const std::pair<std::string, int> & b) -> bool { return a.second > b.second; });
         for (auto& pair : sortedWordStats) {
             auto word = pair.first;
-            auto freq = pair.second;
+            int freq = pair.second;
 
             if (freq < opt.minCount) {
                 break;
             }
 
-            auto lidx = lemmaVocab.size();
-            auto sidx = synsetVocab.size();
+            int lidx = lemmaVocab.size();
+            int sidx = synsetVocab.size();
 
             lemmaVocab[word + "|*|*"] = lidx;
             lidx2Lemma.push_back(word + "|*|*");
@@ -111,8 +111,8 @@ namespace sv4d {
                 continue;
             }
 
-            auto lidx = lemmaVocab.size();
-            auto sidx = synsetVocab.size();
+            int lidx = lemmaVocab.size();
+            int sidx = synsetVocab.size();
 
             lemmaVocab[word + "|*|*"] = lidx;
             lidx2Lemma.push_back(word + "|*|*");
@@ -149,13 +149,13 @@ namespace sv4d {
                 continue;
             }
 
-            auto lidx = lemmaVocab.size();
+            int lidx = lemmaVocab.size();
             lemmaVocab[word + "|" + pos + "|" + synset] = lidx;
             lidx2Lemma.push_back(word + "|" + pos + "|" + synset);
             lemmaProb.push_back(std::stof(data[1]));
 
             if (synsetVocab.find(synset) == synsetVocab.end()) {
-                auto sidx = synsetVocab.size();
+                int sidx = synsetVocab.size();
 
                 synsetVocab[synset] = sidx;
                 sidx2Synset.push_back(synset);
@@ -173,8 +173,8 @@ namespace sv4d {
                 synsetDictPair[sidx] = dictPair;
             }
 
-            auto widx = synsetVocab[word];
-            auto sidx = synsetVocab[synset];
+            int widx = synsetVocab[word];
+            int sidx = synsetVocab[synset];
             lidx2sidx.push_back(sidx);
             if (pos == "n") {
                 widx2lidxs[widx].synsetLemmaIndices[sv4d::Pos::Noun].push_back(lidx);
@@ -215,13 +215,13 @@ namespace sv4d {
 
         for (auto& pair : lemmaVocab) {
             auto lemma = pair.first;
-            auto lidx = pair.second;
+            int lidx = pair.second;
 
             auto lemmaData = sv4d::utils::string::split(lemma, '|');
             auto word = lemmaData[0];
             auto synset = lemmaData[2];
 
-            auto widx = synsetVocab[word];
+            int widx = synsetVocab[word];
             int sidx = 0;
             if (synset != "*") {
                 sidx = synsetVocab[synset];
@@ -272,9 +272,9 @@ namespace sv4d {
             auto pos = lemmaData[1];
             auto synset = lemmaData[2];
 
-            auto lidx = std::stoi(data[1]);
-            auto sidx = std::stoi(data[5]);
-            auto widx = std::stoi(data[3]);
+            int lidx = std::stoi(data[1]);
+            int sidx = std::stoi(data[5]);
+            int widx = std::stoi(data[3]);
             lemmaVocab[word + "|" + pos + "|" + synset] = lidx;
             lidx2Lemma[lidx] = word + "|" + pos + "|" + synset;
             lemmaProb[lidx] = std::stof(data[2]);
