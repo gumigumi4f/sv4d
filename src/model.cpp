@@ -453,7 +453,7 @@ namespace sv4d {
                     }
 
                     // print log
-                    float progress = trainedWordCount / (epochs * vocab.totalWordsNum + 1) * 100.0f;
+                    float progress = trainedWordCount / (float)(epochs * vocab.totalWordsNum + 1) * 100.0f;
                     auto now = std::chrono::system_clock::now();
                     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
                     float speed = trainedWordCount / (float)((elapsed + 1) * threadNum);
