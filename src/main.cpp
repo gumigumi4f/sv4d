@@ -41,7 +41,6 @@ int main(int argc, char** argv) {
         sv4d::Vocab vocab = sv4d::Vocab();
         vocab.load(opt.modelDir + "vocab.txt");
         sv4d::Model model = sv4d::Model(opt, vocab);
-        model.initialize();
         model.loadEmbeddingInWeight(opt.modelDir + "embedding_in_weight", opt.binary);
         model.synsetNearestNeighbour();
     }

@@ -152,9 +152,9 @@ def get_synsets_pair(word, synsets, stwords, vocab):
     
     synsets_data = []
     for synset in synsets:
-        # synset_words = set([x.name() for x in synset.lemmas()] + [word])
+        synset_words = set([x.name() for x in synset.lemmas()] + [word])
         sorted_pair = [k for k, v in sorted(gloss_data[synset.name()].items(), key=lambda x: x[1]["weight"], reverse=True)
-                       if k not in stwords and k in vocab and v["weight"] > 0.0]
+                       if k not in stwords and k in vocab and v["weight"] > 0.0 and k not in synset_words]
         dict_pair = sorted_pair[:25]
         synsets_data.append({"name": synset.name(), "dict_pair": dict_pair})
     
