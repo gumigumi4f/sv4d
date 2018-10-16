@@ -50,6 +50,8 @@ namespace sv4d {
             void initialize();
             void training();
             void trainingThread(const int threadId);
+            void wordNearestNeighbour();
+            void synsetNearestNeighbour();
             void saveEmbeddingInWeight(const std::string& filepath, bool binary);
             void loadEmbeddingInWeight(const std::string& filepath, bool binary);
             void saveEmbeddingOutWeight(const std::string& filepath, bool binary);
@@ -66,6 +68,7 @@ namespace sv4d {
 
             std::chrono::system_clock::time_point startTime;
 
+            void initializeWeight();
             void initializeUnigramTable();
             void initializeSubsamplingFactorTable();
             void initializeFileSize();

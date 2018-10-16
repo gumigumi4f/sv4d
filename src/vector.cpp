@@ -26,7 +26,11 @@ namespace sv4d {
     }
 
     float Vector::sum() {
-        return std::accumulate(data.begin(), data.end(), 0);
+        float sum = 0.0;
+        for (int i = 0; i < col; ++i) {
+            sum += data[i];
+        }
+        return sum;
     }
 
     sv4d::Vector Vector::sigmoid() {

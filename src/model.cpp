@@ -11,6 +11,7 @@
 #include <chrono>
 #include <random>
 #include <cmath>
+#include <utility>
 #include <stdio.h>
 
 namespace sv4d {
@@ -44,10 +45,6 @@ namespace sv4d {
         embeddingInWeight = sv4d::Matrix(vocab.synsetVocabSize, embeddingLayerSize);
         embeddingOutWeight = sv4d::Matrix(vocab.wordVocabSize, embeddingLayerSize);
 
-        //senseSelectionOutWeight.setRandomUniform(-0.5 / embeddingLayerSize, 0.5 / embeddingLayerSize);
-        //senseSelectionOutBias.setRandomUniform(-0.5 / embeddingLayerSize, 0.5 / embeddingLayerSize);
-        embeddingInWeight.setRandomUniform(-0.5 / embeddingLayerSize, 0.5 / embeddingLayerSize);
-
         unigramTable = std::vector<int>();
         subsamplingFactorTable = std::vector<float>();
 
@@ -55,6 +52,7 @@ namespace sv4d {
     }
 
     void Model::initialize() {
+        initializeWeight();
         initializeUnigramTable();
         initializeSubsamplingFactorTable();
         initializeFileSize();
@@ -74,6 +72,10 @@ namespace sv4d {
         } else {
             Model::trainingThread(0);
         }
+    }
+
+    void Model::initializeWeight() {
+        embeddingInWeight.setRandomUniform(-0.5 / embeddingLayerSize, 0.5 / embeddingLayerSize);
     }
 
     void Model::initializeUnigramTable() {
@@ -485,6 +487,108 @@ namespace sv4d {
         }
     }
 
+    void Model::wordNearestNeighbour() {
+        sv4d::Matrix normedEmbeddingInWeight = sv4d::Matrix(embeddingInWeight);
+        for (int i = 0; i < normedEmbeddingInWeight.row; ++i) {
+            float norm = (normedEmbeddingInWeight[i] * normedEmbeddingInWeight[i]).sum();
+            normedEmbeddingInWeight[i] /= std::sqrt(norm);
+        }
+
+        while (true) { 
+            printf("Enter word (EXIT to break): ");
+            std::string word = "";
+            while (1) {
+                char c = fgetc(stdin);
+                if (c == '\n') {
+                    break;
+                }
+                word += c;
+            }
+            if (word == "EXIT") {
+                break;
+            }
+            if (vocab.synsetVocab.find(word) == vocab.synsetVocab.end()) {
+                printf("Out of dictionary word!\n");
+                continue;
+            }
+            int widx = vocab.synsetVocab[word];
+            auto& wordVector = normedEmbeddingInWeight[widx];
+            auto similarities = std::vector<std::pair<int, float>>();
+            for (int i = 0; i < normedEmbeddingInWeight.row; ++i) {
+                if (i == widx) {
+                    continue;
+                }
+                std::pair<int, float> pair;
+                pair.first = i;
+                pair.second = wordVector % normedEmbeddingInWeight[i];
+                similarities.push_back(pair);
+            }
+            std::sort(similarities.begin(), similarities.end(), [](const std::pair<int, float> & a, const std::pair<int, float> & b) -> bool { return a.second > b.second; });
+            printf("Word %d: %s", widx, vocab.sidx2Synset[widx].c_str());
+            printf("\n                                              Word       Cosine distance\n------------------------------------------------------------------------\n");
+            for (int i = 0; i < 40; ++i) {
+                printf("%50s\t\t%f\n", vocab.sidx2Synset[similarities[i].first].c_str(), similarities[i].second);
+            }
+            printf("\n");
+        }
+    }
+
+    void Model::synsetNearestNeighbour() {
+        sv4d::Matrix normedEmbeddingInWeight = sv4d::Matrix(embeddingInWeight);
+        for (int i = 0; i < normedEmbeddingInWeight.row; ++i) {
+            float norm = (normedEmbeddingInWeight[i] * normedEmbeddingInWeight[i]).sum();
+            normedEmbeddingInWeight[i] /= std::sqrt(norm);
+        }
+
+        while (true) { 
+            printf("Enter word (EXIT to break): ");
+            std::string word = "";
+            while (1) {
+                char c = fgetc(stdin);
+                if (c == '\n') {
+                    break;
+                }
+                word += c;
+            }
+            if (word == "EXIT") {
+                break;
+            }
+            if (vocab.synsetVocab.find(word) == vocab.synsetVocab.end()) {
+                printf("Out of dictionary word!\n");
+                continue;
+            }
+            int widx = vocab.synsetVocab[word];
+            for (int pos : {sv4d::Pos::Noun, sv4d::Pos::Verb, sv4d::Pos::Adjective, sv4d::Pos::Adverb}) {
+                if (std::find(vocab.widx2lidxs[widx].validPos.begin(), vocab.widx2lidxs[widx].validPos.end(), pos) == vocab.widx2lidxs[widx].validPos.end()) {
+                    continue;
+                }
+                for (int lidx : vocab.widx2lidxs[widx].synsetLemmaIndices[pos]) {
+                    int sidx = vocab.lidx2sidx[lidx];
+                    auto synsetVector = normedEmbeddingInWeight[sidx];
+
+                    auto similarities = std::vector<std::pair<int, float>>();
+                    for (int i = 0; i < normedEmbeddingInWeight.row; ++i) {
+                        if (i == sidx) {
+                            continue;
+                        }
+                        std::pair<int, float> pair;
+                        pair.first = i;
+                        pair.second = synsetVector % normedEmbeddingInWeight[i];
+                        similarities.push_back(pair);
+                    }
+
+                    std::sort(similarities.begin(), similarities.end(), [](const std::pair<int, float> & a, const std::pair<int, float> & b) -> bool { return a.second > b.second; });
+                    printf("Synset %d: %s", sidx, vocab.sidx2Synset[sidx].c_str());
+                    printf("\n                                              Word       Cosine distance\n------------------------------------------------------------------------\n");
+                    for (int i = 0; i < 20; ++i) {
+                        printf("%50s\t\t%f\n", vocab.sidx2Synset[similarities[i].first].c_str(), similarities[i].second);
+                    }
+                    printf("\n");
+                }
+            }
+        }
+    }
+
     void Model::saveEmbeddingInWeight(const std::string& filepath, bool binary) {
         std::ofstream fout(filepath, std::ios::out | std::ios::binary | std::ios::trunc);
         fout << vocab.synsetVocabSize << " " << embeddingLayerSize << "\n";
@@ -507,6 +611,9 @@ namespace sv4d {
     void Model::loadEmbeddingInWeight(const std::string& filepath, bool binary) {
         std::string linebuf;
         std::ifstream fin(filepath, std::ios::in | std::ios::binary);
+        if (fin.fail()) {
+            return;
+        }
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
         int synsetVocabSize = std::stoi(sizes[0]);
@@ -557,6 +664,9 @@ namespace sv4d {
     void Model::loadEmbeddingOutWeight(const std::string& filepath, bool binary) {
         std::string linebuf;
         std::ifstream fin(filepath, std::ios::in | std::ios::binary);
+        if (fin.fail()) {
+            return;
+        }
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
         int wordVocabSize = std::stoi(sizes[0]);
@@ -607,6 +717,9 @@ namespace sv4d {
     void Model::loadSenseSelectionOutWeight(const std::string& filepath, bool binary) {
         std::string linebuf;
         std::ifstream fin(filepath, std::ios::in | std::ios::binary);
+        if (fin.fail()) {
+            return;
+        }
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
         int lemmaVocabSize = std::stoi(sizes[0]);
@@ -655,6 +768,9 @@ namespace sv4d {
     void Model::loadSenseSelectionBiasWeight(const std::string& filepath, bool binary) {
         std::string linebuf;
         std::ifstream fin(filepath, std::ios::in | std::ios::binary);
+        if (fin.fail()) {
+            return;
+        }
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
         int lemmaVocabSize = std::stoi(sizes[0]);

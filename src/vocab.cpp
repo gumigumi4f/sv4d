@@ -199,6 +199,11 @@ namespace sv4d {
             }
         }
 
+        for (auto& synsetData : widx2lidxs) {
+            for (int pos : synsetData.validPos) {
+                std::sort(synsetData.synsetLemmaIndices[pos].begin(), synsetData.synsetLemmaIndices[pos].end());
+            }
+        }
 
         lemmaVocabSize = lemmaVocab.size();
         synsetVocabSize = synsetVocab.size();
