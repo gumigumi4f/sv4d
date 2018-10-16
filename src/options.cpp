@@ -26,7 +26,7 @@ namespace sv4d {
         initialLearningRate = 0.025;
         minLearningRate = 0.0001;
         initialTemperature = 1.0;
-        minTemperature = 0.1;
+        minTemperature = 0.01;
         initialBetaDict = 0.8;
         minBetaDict = 0.35;
         initialBetaReward = 0.8;

@@ -371,8 +371,8 @@ namespace sv4d {
                                                   + (1.0 - rewardProb[i]) * -sv4d::utils::operation::sigmoid(senseSelectionLogits[i]);
                                         sv4d::Vector& vSenseSelection = senseSelectionOutWeight[lidx];
                                         auto& bSenseSelection = senseSelectionOutBias[lidx];
-                                        vSenseSelection += featureVectorCache * (g * lr);
-                                        bSenseSelection += (g * lr);
+                                        vSenseSelection += featureVectorCache * (g * initialLearningRate);
+                                        bSenseSelection += (g * initialLearningRate);
                                     }
                                 }
 
