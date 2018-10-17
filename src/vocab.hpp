@@ -33,13 +33,13 @@ namespace sv4d {
         public:
             Vocab();
 
-            long totalWordsNum;
-            long sentenceNum;
-            long documentNum;
-
             int lemmaVocabSize;
             int synsetVocabSize;
             int wordVocabSize;
+
+            long totalWordsNum;
+            long totalSentenceNum;
+            long totalDocumentNum;
 
             std::unordered_map<std::string, int> lemmaVocab;
             std::unordered_map<std::string, int> synsetVocab;

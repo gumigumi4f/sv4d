@@ -21,13 +21,13 @@ namespace sv4d {
     }
 
     Vocab::Vocab() {
-        totalWordsNum = 0;
-        sentenceNum = 0;
-        documentNum = 0;
-        
         lemmaVocabSize = 0;
         synsetVocabSize = 0;
         wordVocabSize = 0;
+
+        totalWordsNum = 0;
+        totalSentenceNum = 0;
+        totalDocumentNum = 0;
 
         lemmaVocab = std::unordered_map<std::string, int>();
         synsetVocab = std::unordered_map<std::string, int>();
@@ -52,7 +52,7 @@ namespace sv4d {
         while (std::getline(corpusfin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);
             if (linebuf == "<doc>") {
-                documentNum += 1;
+                totalDocumentNum += 1;
                 continue;
             } else if (linebuf == "</doc>") {
                 continue;
@@ -64,9 +64,9 @@ namespace sv4d {
                 ++wordStats[word];
             }
 
-            sentenceNum += 1;
-            if (sentenceNum % 10000 == 0) {
-                printf("%cReading Line: %ldk  ", 13, sentenceNum / 1000);
+            totalSentenceNum += 1;
+            if (totalSentenceNum % 10000 == 0) {
+                printf("%cReading Line: %ldk  ", 13, totalSentenceNum / 1000);
                 fflush(stdout);
             }
         }
@@ -96,7 +96,7 @@ namespace sv4d {
         }
 
         printf("\n");
-        printf("SentenceNum: %ld  DocumentNum: %ld  \n", sentenceNum, documentNum);
+        printf("SentenceNum: %ld  DocumentNum: %ld  \n", totalSentenceNum, totalDocumentNum);
         printf("Reading sense file:  \n");
 
         std::ifstream synsetfin(opt.synsetDataFile);
@@ -218,7 +218,7 @@ namespace sv4d {
         std::ofstream fout(filepath);
 
         fout << lemmaVocabSize << " " << synsetVocabSize << " " << wordVocabSize << "\n";
-        fout << totalWordsNum << " " << sentenceNum << " " << documentNum << "\n";
+        fout << totalWordsNum << " " << totalSentenceNum << " " << totalDocumentNum << "\n";
 
         for (auto& pair : lemmaVocab) {
             auto lemma = pair.first;

@@ -174,18 +174,18 @@ namespace sv4d {
                     }
                     // document vector
                     documentVectorCache.setZero();
-                    int documentNum = 0;
+                    int documentSize = 0;
                     for (auto& sentence : documentCache) {
                         for (int widx : sentence) {
                             sv4d::Vector& embeddingInVector = embeddingInWeight[widx];
                             documentVectorCache += embeddingInVector;
                         }
-                        documentNum += sentence.size();
+                        documentSize += sentence.size();
                     }
-                    documentVectorCache /= documentNum;
+                    documentVectorCache /= documentSize;
 
                     for (auto& sentence : documentCache) {
-                        int sentenceNum = sentence.size();
+                        int sentenceSize = sentence.size();
                         subSampledCache.clear();
 
                         // sentence vector
@@ -195,9 +195,9 @@ namespace sv4d {
                             sentenceVectorCache += embeddingInVector;
                             subSampledCache.push_back(subsamplingFactorTable[widx] < rand(mt));
                         }
-                        sentenceVectorCache /= sentenceNum;
+                        sentenceVectorCache /= sentenceSize;
 
-                        for (int pos = 0; pos < sentenceNum; ++pos) {
+                        for (int pos = 0; pos < sentenceSize; ++pos) {
                             if (subSampledCache[pos]) {
                                 continue;
                             }
@@ -205,7 +205,7 @@ namespace sv4d {
                             // context vector
                             contextVectorCache.setZero();
                             int minPos = pos - windowSize < 0 ? 0 : pos - windowSize;
-                            int maxPos = pos + windowSize >= sentenceNum ? sentenceNum - 1 : pos + windowSize;
+                            int maxPos = pos + windowSize >= sentenceSize ? sentenceSize - 1 : pos + windowSize;
                             for (int pos2 = minPos; pos2 <= maxPos; ++pos2) {
                                 if (pos == pos2) {
                                     continue;
@@ -225,7 +225,7 @@ namespace sv4d {
                                 outputWidxCandidateCache.push_back(sentence[pos2]);
                                 count -= 1;
                             }
-                            for (int pos2 = pos + 1, count = reducedWindowSize; pos2 < sentenceNum && count != 0; ++pos2) {
+                            for (int pos2 = pos + 1, count = reducedWindowSize; pos2 < sentenceSize && count != 0; ++pos2) {
                                 if (subSampledCache[pos2]) {
                                     continue;
                                 }
@@ -435,7 +435,7 @@ namespace sv4d {
                             }
                         }
 
-                        trainedWordCount += sentenceNum;
+                        trainedWordCount += sentenceSize;
                     }
 
                     if (fin.tellg() > fileSize / threadNum * (threadId + 1)) {
