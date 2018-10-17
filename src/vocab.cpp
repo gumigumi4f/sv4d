@@ -159,18 +159,20 @@ namespace sv4d {
 
                 synsetVocab[synset] = sidx;
                 sidx2Synset.push_back(synset);
-
-                auto dictPair = sv4d::SynsetDictPair();
-                for (auto word : sv4d::utils::string::split(data[2], ',')) {
-                    if (synsetVocab.find(word) == synsetVocab.end()) {
-                        continue;
+                
+                if (data.size() >= 3) {
+                    auto dictPair = sv4d::SynsetDictPair();
+                    for (auto word : sv4d::utils::string::split(data[2], ',')) {
+                        if (synsetVocab.find(word) == synsetVocab.end()) {
+                            continue;
+                        }
+                        dictPair.dictPair.push_back(synsetVocab[word]);
+                        if (dictPair.dictPair.size() >= opt.maxDictPair) {
+                            break;
+                        } 
                     }
-                    dictPair.dictPair.push_back(synsetVocab[word]);
-                    if (dictPair.dictPair.size() >= opt.maxDictPair) {
-                        break;
-                    } 
+                    synsetDictPair[sidx] = dictPair;
                 }
-                synsetDictPair[sidx] = dictPair;
             }
 
             int widx = synsetVocab[word];

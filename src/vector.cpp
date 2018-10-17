@@ -10,7 +10,9 @@ namespace sv4d {
     Vector::Vector(int n) : data(n, 0.0), col(n) {}
 
     void Vector::setZero() {
-        std::fill(data.begin(), data.end(), 0.0);
+        for (int i = 0; i < col; ++i) {
+            data[i] = 0.0f;
+        }
     }
 
     void Vector::setRandomUniform(float min, float max) {
@@ -26,7 +28,7 @@ namespace sv4d {
     }
 
     float Vector::sum() {
-        float sum = 0.0;
+        float sum = 0.0f;
         for (int i = 0; i < col; ++i) {
             sum += data[i];
         }
@@ -43,19 +45,23 @@ namespace sv4d {
 
     sv4d::Vector Vector::softmax(float temperature) {
         sv4d::Vector outputVector(col);
-        float max = 0.0;
-        for (int i = 0; i < col; ++i) {
-            float logit = data[i] / temperature;
-            outputVector.data[i] = logit;
-            max = std::max(max, logit);
-        }
-        float sum = 0.0;
-        for (auto& x : outputVector.data) {
-            x = std::exp(x - max);
-            sum += x;
-        }
-        for (auto& x : outputVector.data) {
-            x /= sum;
+        if (col == 1) {
+            outputVector[0] = 1.0f;
+        } else {
+            float max = 0.0f;
+            for (int i = 0; i < col; ++i) {
+                float logit = data[i] / temperature;
+                outputVector.data[i] = logit;
+                max = std::max(max, logit);
+            }
+            float sum = 0.0f;
+            for (auto& x : outputVector.data) {
+                x = std::exp(x - max);
+                sum += x;
+            }
+            for (auto& x : outputVector.data) {
+                x /= sum;
+            }
         }
         return outputVector;
     }
@@ -104,7 +110,7 @@ namespace sv4d {
         outputVector += value;
         return outputVector;
     }
-    
+
     sv4d::Vector Vector::operator-(const float value) {
         sv4d::Vector outputVector(col);
         outputVector += *this;
@@ -174,7 +180,7 @@ namespace sv4d {
         }
         return *this;
     }
-    
+
     sv4d::Vector Vector::operator/=(const sv4d::Vector& vector) {
         for (int i = 0; i < col; ++i) {
             data[i] /= vector.data[i];
