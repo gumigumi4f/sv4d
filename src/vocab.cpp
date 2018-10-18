@@ -268,8 +268,8 @@ namespace sv4d {
         std::getline(fin, linebuf);
         auto nums = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
         totalWordsNum = std::stoi(nums[0]);
-        sentenceNum = std::stoi(nums[1]);
-        documentNum = std::stoi(nums[2]);
+        totalSentenceNum = std::stoi(nums[1]);
+        totalDocumentNum = std::stoi(nums[2]);
 
         while (std::getline(fin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);

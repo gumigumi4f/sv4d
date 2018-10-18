@@ -3,8 +3,10 @@
 #include "model.hpp"
 
 #include <iostream>
+#include <fenv.h>
 
 int main(int argc, char** argv) {
+    feenableexcept(FE_INVALID | FE_OVERFLOW);
     std::vector<std::string> args(argv, argv + argc);
     if (args.size() <= 2) {
         std::cerr << "usage: sv4d <command> <options>" << '\n';

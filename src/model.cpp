@@ -109,8 +109,13 @@ namespace sv4d {
     void Model::initializeSubsamplingFactorTable() {
         subsamplingFactorTable.resize(vocab.wordVocabSize);
         for (int i = 0; i < vocab.wordVocabSize; ++i) {
-            float factor = (std::sqrt(vocab.wordFreq[i] / (subSamplingFactor * vocab.totalWordsNum)) + 1) * (subSamplingFactor * vocab.totalWordsNum) / vocab.wordFreq[i];
-            subsamplingFactorTable[i] = factor;
+            if (vocab.wordFreq[i] == 0) {
+                subsamplingFactorTable[i] = 0.0;
+            } else {
+                float factor = (std::sqrt(vocab.wordFreq[i] / (subSamplingFactor * vocab.totalWordsNum)) + 1) * (subSamplingFactor * vocab.totalWordsNum) / vocab.wordFreq[i];
+                subsamplingFactorTable[i] = factor;
+            }
+            
         }
     }
 
