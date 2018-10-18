@@ -27,7 +27,12 @@ class Model:
         self.lidx2sidx = {}
 
         self.lemma_prob = {}
-    
+
+    def __getitem__(self, word):
+        if word not in self.synset_vocab:
+            raise ValueError("Word %s is not in vocab" % word)
+        return self.embedding_in_weight[self.synset_vocab[word]]
+
     def load_vocab(self):
         if not self.model_dir:
             raise ValueError("Model directory is empty")
@@ -66,6 +71,29 @@ class Model:
                 self.widx2lidxs[widx][pos].append(lidx)
             
             self.lidx2sidx[lidx] = sidx
+    
+    def calculate_sense_probability(self, word, pos, contexts, sentence, document, use_sense_freq=False):
+        if word not in self.synset_vocab:
+            raise ValueError("Word %s is not found in vocab" % (word))
+
+        synset_data = self.widx2lidxs[self.synset_vocab[word]]
+        if pos not in synset_data:
+            return (np.ones((1,)), [word])
+            # raise ValueError("Pos %s is not found in synset data" % (pos))
+
+        contexts_vector = self.embedding_in_weight[[self.synset_vocab[word] for word in contexts if word in self.synset_vocab]].mean(axis=0)
+        sentence_vector = self.embedding_in_weight[[self.synset_vocab[word] for word in sentence if word in self.synset_vocab]].mean(axis=0)
+        document_vector = self.embedding_in_weight[[self.synset_vocab[word] for word in document if word in self.synset_vocab]].mean(axis=0)
+
+        feature_vector = np.concatenate([contexts_vector, sentence_vector, document_vector])
+
+        synset_logits = []
+        for lidx in synset_data[pos]:
+            dot = np.dot(feature_vector, self.sense_selection_out_weight[lidx]) + self.sense_selection_out_bias[lidx]
+            synset_logits.append(dot)
+        
+        synset_prob = self._softmax(synset_logits)
+        return (synset_prob, [self.sidx2synset[self.lidx2sidx[lidx]] for lidx in synset_data[pos]])
 
     def load_weight(self):
         if not self.model_dir:
@@ -79,6 +107,13 @@ class Model:
         self.sense_selection_out_bias = self._read_weight_from_file_gensim(os.path.join(self.model_dir, "sense_selection_out_bias"), self.lemma_vocab)
         self.sense_selection_out_bias = self.sense_selection_out_bias.reshape(-1)
     
+    def _softmax(self, a):
+        c = np.max(a)
+        exp_a = np.exp(a - c)
+        sum_exp_a = np.sum(exp_a)
+        y = exp_a / sum_exp_a
+        return y 
+
     def _read_weight_from_file_gensim(self, filename, data):
         kv = gensim.models.KeyedVectors.load_word2vec_format(filename, binary=True)
         weight = np.zeros(shape=kv.vectors.shape)
@@ -134,9 +169,3 @@ class Model:
             offset += 1
         
         return weight
-
-
-if __name__ == "__main__":
-    model = Model("./models/default/")
-    model.load_vocab()
-    model.load_weight()
