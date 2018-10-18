@@ -276,7 +276,7 @@ namespace sv4d {
                                     sv4d::Vector senseSelectionLogits = sv4d::Vector(senseNum);
                                     for (int i = 0; i < senseNum; ++i) {
                                         int lidx = synsetLemmaIndices[i];
-                                        senseSelectionLogits[i] = (senseSelectionOutWeight[lidx] % featureVectorCache) + senseSelectionOutBias[lidx];
+                                        senseSelectionLogits[i] = (featureVectorCache % senseSelectionOutWeight[lidx]) + senseSelectionOutBias[lidx];
                                     }
                                     sv4d::Vector senseSelectionProb = senseSelectionLogits.softmax(temperature);
 
@@ -574,7 +574,9 @@ namespace sv4d {
                 if (std::find(vocab.widx2lidxs[widx].validPos.begin(), vocab.widx2lidxs[widx].validPos.end(), pos) == vocab.widx2lidxs[widx].validPos.end()) {
                     continue;
                 }
-                for (int lidx : vocab.widx2lidxs[widx].synsetLemmaIndices[pos]) {
+                auto lemmas = vocab.widx2lidxs[widx].synsetLemmaIndices[pos];
+                std::sort(lemmas.begin(), lemmas.end());
+                for (int lidx : lemmas) {
                     int sidx = vocab.lidx2sidx[lidx];
                     auto synsetVector = normedEmbeddingInWeight[sidx];
 
