@@ -11,8 +11,8 @@ namespace sv4d {
     Matrix::Matrix(int m, int n) : data(m, sv4d::Vector(n)), row(m), col(n) {}
 
     void Matrix::setZero() {
-        for (int i = 0; i < row; i++) {
-            data[i].setZero();
+        for (auto& x : data) {
+            x.setZero();
         }
     }
     

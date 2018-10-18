@@ -10,16 +10,16 @@ namespace sv4d {
     Vector::Vector(int n) : data(n, 0.0), col(n) {}
 
     void Vector::setZero() {
-        for (int i = 0; i < col; ++i) {
-            data[i] = 0.0f;
+        for (float& x : data) {
+            x = 0.0f;
         }
     }
 
     void Vector::setRandomUniform(float min, float max) {
         std::mt19937 mt(495);
         std::uniform_real_distribution<float> r(min, max);
-        for (int i = 0; i < col; ++i) {
-            data[i] = r(mt);
+        for (float& x : data) {
+            x = r(mt);
         }
     }
 
@@ -29,8 +29,8 @@ namespace sv4d {
 
     float Vector::sum() {
         float sum = 0.0f;
-        for (int i = 0; i < col; ++i) {
-            sum += data[i];
+        for (float& x : data) {
+            sum += x;
         }
         return sum;
     }
@@ -55,11 +55,11 @@ namespace sv4d {
                 max = std::max(max, logit);
             }
             float sum = 0.0f;
-            for (auto& x : outputVector.data) {
+            for (float& x : outputVector.data) {
                 x = std::exp(x - max);
                 sum += x;
             }
-            for (auto& x : outputVector.data) {
+            for (float& x : outputVector.data) {
                 x /= sum;
             }
         }
@@ -67,7 +67,7 @@ namespace sv4d {
     }
 
     void Vector::clipByValue(float min, float max) {
-        for (auto& x : data) {
+        for (float& x : data) {
             if (x > max) {
                 x = max;
             } else if (x < min) {
