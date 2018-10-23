@@ -88,9 +88,9 @@ namespace sv4d {
 
             inline float sigmoid(float x) {
                 if (x < -MaxSigmoid) {
-                    return 0.0;
+                    return 0.0f;
                 } else if (x > MaxSigmoid) {
-                    return 1.0;
+                    return 1.0f;
                 } else {
                     int i = int((x + MaxSigmoid) * SigmoidTableSize / MaxSigmoid / 2);
                     return sigmoidTable[i];

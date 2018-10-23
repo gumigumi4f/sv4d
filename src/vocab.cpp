@@ -172,6 +172,8 @@ namespace sv4d {
                         } 
                     }
                     synsetDictPair[sidx] = dictPair;
+                } else {
+                    synsetDictPair[sidx] = sv4d::SynsetDictPair();
                 }
             }
 
@@ -237,10 +239,14 @@ namespace sv4d {
             }
 
             std::string dictPair;
-            if (synsetDictPair.find(sidx) == synsetDictPair.end()) {
-                dictPair = "-1";
+            if (synsetDictPair.find(sidx) != synsetDictPair.end()) {
+                if (synsetDictPair[sidx].dictPair.size() != 0) {
+                    dictPair = sv4d::utils::string::join(sv4d::utils::string::intvec_to_strvec(synsetDictPair[sidx].dictPair), ',');
+                } else {
+                    dictPair = "-1";
+                }
             } else {
-                dictPair = sv4d::utils::string::join(sv4d::utils::string::intvec_to_strvec(synsetDictPair[sidx].dictPair), ',');
+                dictPair = "-1";
             }
 
             fout << lemma << " " << lidx << " " << lemmaProb[lidx] << " " << widx << " " << wordFreq[widx] << " " << sidx << " " << dictPair << "\n";
@@ -302,6 +308,8 @@ namespace sv4d {
                     if (data[6] != "-1") {
                         synsetDictPair[sidx] = sv4d::SynsetDictPair();
                         synsetDictPair[sidx].dictPair = sv4d::utils::string::strvec_to_intvec(sv4d::utils::string::split(data[6], ','));
+                    } else {
+                        synsetDictPair[sidx] = sv4d::SynsetDictPair();
                     }
                 }
                 

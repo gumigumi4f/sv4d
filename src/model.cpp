@@ -137,7 +137,7 @@ namespace sv4d {
         std::uniform_int_distribution<int> rndwindow(0, windowSize - 1);
 
         // initialize negative sampling position
-        int negativePos = mt() % UnigramTableSize;
+        int negativePos = mt() % UnigramTableSize + 1;
 
         // hyper parameter
         float lr = initialLearningRate;
@@ -207,19 +207,6 @@ namespace sv4d {
                                 continue;
                             }
 
-                            // context vector
-                            contextVectorCache.setZero();
-                            int minPos = pos - windowSize < 0 ? 0 : pos - windowSize;
-                            int maxPos = pos + windowSize >= sentenceSize ? sentenceSize - 1 : pos + windowSize;
-                            for (int pos2 = minPos; pos2 <= maxPos; ++pos2) {
-                                if (pos == pos2) {
-                                    continue;
-                                }
-                                sv4d::Vector& embeddingInVector = embeddingInWeight[sentence[pos2]];
-                                contextVectorCache += embeddingInVector;
-                            }
-                            contextVectorCache /= (maxPos - minPos - 1);
-
                             // output widx
                             outputWidxCandidateCache.clear();
                             int reducedWindowSize = windowSize - rndwindow(mt);
@@ -237,12 +224,23 @@ namespace sv4d {
                                 outputWidxCandidateCache.push_back(sentence[pos2]);
                                 count -= 1;
                             }
-
                             if (outputWidxCandidateCache.size() == 0) {
                                 continue;
                             }
-
                             int outputWidx = outputWidxCandidateCache[mt() % outputWidxCandidateCache.size()];
+
+                            // context vector
+                            contextVectorCache.setZero();
+                            int minPos = pos - windowSize < 0 ? 0 : pos - windowSize;
+                            int maxPos = pos + windowSize >= sentenceSize ? sentenceSize - 1 : pos + windowSize;
+                            for (int pos2 = minPos; pos2 <= maxPos; ++pos2) {
+                                if (pos == pos2) {
+                                    continue;
+                                }
+                                sv4d::Vector& embeddingInVector = embeddingInWeight[sentence[pos2]];
+                                contextVectorCache += embeddingInVector;
+                            }
+                            contextVectorCache /= (maxPos - minPos - 1);
 
                             // input widx
                             int inputWidx = sentence[pos];
@@ -289,13 +287,7 @@ namespace sv4d {
                                         float senseWeight = senseSelectionProb[i];
 
                                         int sidx = vocab.lidx2sidx[synsetLemmaIndices[i]];
-                                        sv4d::SynsetDictPair synsetDictPair;
-                                        if (vocab.synsetDictPair.find(sidx) != vocab.synsetDictPair.end()) {
-                                            synsetDictPair = vocab.synsetDictPair[sidx];
-                                        } else {
-                                            synsetDictPair = sv4d::SynsetDictPair();
-                                        }
-                                        
+                                        sv4d::SynsetDictPair& synsetDictPair = vocab.synsetDictPair[sidx];
                                         auto& dictPair = synsetDictPair.dictPair;
 
                                         sv4d::Vector& vSynsetIn = embeddingInWeight[sidx];
@@ -310,8 +302,9 @@ namespace sv4d {
                                             float dot = vSynsetIn % vWordOut;
                                             rewardLogits[i] += dot;
                                             float g = sv4d::utils::operation::sigmoid(-dot);
-                                            embeddingInBufVector += vWordOut * (g * lr * senseWeight);
-                                            embeddingOutBufVector += vSynsetIn * (g * lr * senseWeight);
+                                            float w = g * lr * senseWeight;
+                                            embeddingInBufVector += vWordOut * w;
+                                            embeddingOutBufVector += vSynsetIn * w;
                                         }
 
                                         // Negative samples:
@@ -321,11 +314,9 @@ namespace sv4d {
                                         //             dl/d(v_in) = g * v_out'
                                         //             dl/d(v_out) = v_in' * g
                                         for (int j = 0; j < negativeSample; ++j) {
-                                            int sample = unigramTable[negativePos];
-                                            if (negativePos == UnigramTableSize - 1) {
-                                                negativePos = 0;
-                                            } else {
-                                                negativePos += 1;
+                                            int sample = unigramTable[--negativePos];
+                                            if (negativePos == 0) {
+                                                negativePos = UnigramTableSize;
                                             }
                                             if (sample == outputWidx) {
                                                 continue;
@@ -336,8 +327,9 @@ namespace sv4d {
                                             sv4d::Vector& vSample = embeddingOutWeight[sample];
                                             float dot = vSynsetIn % vSample;
                                             float g = -sv4d::utils::operation::sigmoid(dot);
-                                            embeddingInBufVector += vSample * (g * lr * senseWeight);
-                                            vSample += vSynsetIn * (g * lr * senseWeight);
+                                            float w = g * lr * senseWeight;
+                                            embeddingInBufVector += vSample * w;
+                                            vSample += vSynsetIn * w;
                                         }
 
                                         // Positive: dictionary pairs for accurate prediction
@@ -350,19 +342,17 @@ namespace sv4d {
                                             if (dictPair.size() == 0) {
                                                 break;
                                             }
-                                            int sample = dictPair[synsetDictPair.dpos];
-                                            if (synsetDictPair.dpos == dictPair.size() - 1) {
+                                            int sample = dictPair[synsetDictPair.dpos++];
+                                            if (synsetDictPair.dpos == dictPair.size()) {
                                                 synsetDictPair.dpos = 0;
-                                            } else {
-                                                synsetDictPair.dpos += 1;
                                             }
                                             sv4d::Vector& vSample = embeddingOutWeight[sample];
                                             rewardLogits[i] += (vWordOutIn % vSample) * betaReward;
                                             float dot = vSynsetIn % vSample;
                                             float g = sv4d::utils::operation::sigmoid(-dot);
-                                            float d = (g * lr * betaDict / senseNum);
-                                            embeddingInBufVector += vSample * d;
-                                            vSample += vSynsetIn * d;
+                                            float w = (g * lr * betaDict / senseNum);
+                                            embeddingInBufVector += vSample * w;
+                                            vSample += vSynsetIn * w;
                                         }
 
                                         vSynsetIn += embeddingInBufVector;
@@ -379,12 +369,13 @@ namespace sv4d {
                                     //             dl/d(v_sense_bias) = g
                                     for (int i = 0; i < senseNum; ++i) {
                                         int lidx = synsetLemmaIndices[i];
-                                        float g = rewardProb[i] * sv4d::utils::operation::sigmoid(-senseSelectionLogits[i])
-                                                  + (1.0f - rewardProb[i]) * -sv4d::utils::operation::sigmoid(senseSelectionLogits[i]);
+                                        float prob = sv4d::utils::operation::sigmoid(senseSelectionLogits[i]);
+                                        float g = rewardProb[i] * (1 - prob) + (1.0f - rewardProb[i]) * -prob;
                                         sv4d::Vector& vSenseSelection = senseSelectionOutWeight[lidx];
-                                        auto& bSenseSelection = senseSelectionOutBias[lidx];
-                                        vSenseSelection += featureVectorCache * (g * initialLearningRate);
-                                        bSenseSelection += (g * initialLearningRate);
+                                        float& bSenseSelection = senseSelectionOutBias[lidx];
+                                        float w = g * initialLearningRate;
+                                        vSenseSelection += featureVectorCache * w;
+                                        bSenseSelection += w;
                                     }
                                 }
 
@@ -405,8 +396,9 @@ namespace sv4d {
                                     {
                                         float dot = vWordIn % vWordOut;
                                         float g = sv4d::utils::operation::sigmoid(-dot);
-                                        embeddingInBufVector += vWordOut * (g * lr);
-                                        embeddingOutBufVector += vWordIn * (g * lr);
+                                        float w = g * lr;
+                                        embeddingInBufVector += vWordOut * w;
+                                        embeddingOutBufVector += vWordIn * w;
                                     }
 
                                     // Negative samples:
@@ -416,11 +408,9 @@ namespace sv4d {
                                     //             dl/d(v_in) = g * v_out'
                                     //             dl/d(v_out) = v_in' * g
                                     for (int j = 0; j < negativeSample; ++j) {
-                                        int sample = unigramTable[negativePos];
-                                        if (negativePos == UnigramTableSize - 1) {
-                                            negativePos = 0;
-                                        } else {
-                                            negativePos += 1;
+                                        int sample = unigramTable[--negativePos];
+                                        if (negativePos == 0) {
+                                            negativePos = UnigramTableSize;
                                         }
                                         if (sample == outputWidx) {
                                             continue;
@@ -428,8 +418,9 @@ namespace sv4d {
                                         sv4d::Vector& vSample = embeddingOutWeight[sample];
                                         float dot = vWordIn % vSample;
                                         float g = -sv4d::utils::operation::sigmoid(dot);
-                                        embeddingInBufVector += vSample * (g * lr);
-                                        vSample += vWordIn * (g * lr);
+                                        float w = g * lr;
+                                        embeddingInBufVector += vSample * w;
+                                        vSample += vWordIn * w;
                                     }
 
                                     vWordIn += embeddingInBufVector;
