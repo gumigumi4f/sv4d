@@ -67,7 +67,7 @@ namespace sv4d {
         return outputVector;
     }
 
-    void Vector::addVectorWithFactor(const sv4d::Vector& vector, const float factor) {
+    void Vector::fusedMultiplyAdd(const sv4d::Vector& vector, const float factor) {
         for (int i = 0; i < col; ++i) {
             data[i] += vector.data[i] * factor;
         }

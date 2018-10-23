@@ -305,8 +305,8 @@ namespace sv4d {
                                             float w = g * lr * senseWeight;
                                             // embeddingInBufVector += vWordOut * w;
                                             // embeddingOutBufVector += vSynsetIn * w;
-                                            embeddingInBufVector.addVectorWithFactor(vWordOut, w);
-                                            embeddingOutBufVector.addVectorWithFactor(vSynsetIn, w);
+                                            embeddingInBufVector.fusedMultiplyAdd(vWordOut, w);
+                                            embeddingOutBufVector.fusedMultiplyAdd(vSynsetIn, w);
                                         }
 
                                         // Negative samples:
@@ -330,8 +330,8 @@ namespace sv4d {
                                             float dot = vSynsetIn % vSample;
                                             float g = -sv4d::utils::operation::sigmoid(dot);
                                             float w = g * lr * senseWeight;
-                                            embeddingInBufVector.addVectorWithFactor(vSample, w);
-                                            vSample.addVectorWithFactor(vSynsetIn, w);
+                                            embeddingInBufVector.fusedMultiplyAdd(vSample, w);
+                                            vSample.fusedMultiplyAdd(vSynsetIn, w);
                                         }
 
                                         // Positive: dictionary pairs for accurate prediction
@@ -357,8 +357,8 @@ namespace sv4d {
                                             float w = (g * lr * betaDict / senseNum);
                                             // embeddingInBufVector += vSample * w;
                                             // vSample += vSynsetIn * w;
-                                            embeddingInBufVector.addVectorWithFactor(vSample, w);
-                                            vSample.addVectorWithFactor(vSynsetIn, w);
+                                            embeddingInBufVector.fusedMultiplyAdd(vSample, w);
+                                            vSample.fusedMultiplyAdd(vSynsetIn, w);
                                         }
 
                                         vSynsetIn += embeddingInBufVector;
@@ -382,7 +382,7 @@ namespace sv4d {
                                         float w = g * initialLearningRate;
                                         // vSenseSelection += featureVectorCache * w;
                                         // bSenseSelection += w;
-                                        vSenseSelection.addVectorWithFactor(featureVectorCache, w);
+                                        vSenseSelection.fusedMultiplyAdd(featureVectorCache, w);
                                         bSenseSelection += w;
                                     }
                                 }
@@ -407,8 +407,8 @@ namespace sv4d {
                                         float w = g * lr;
                                         // embeddingInBufVector += vWordOut * w;
                                         // embeddingOutBufVector += vWordIn * w;
-                                        embeddingInBufVector.addVectorWithFactor(vWordOut, w);
-                                        embeddingOutBufVector.addVectorWithFactor(vWordIn, w);
+                                        embeddingInBufVector.fusedMultiplyAdd(vWordOut, w);
+                                        embeddingOutBufVector.fusedMultiplyAdd(vWordIn, w);
                                     }
 
                                     // Negative samples:
@@ -431,8 +431,8 @@ namespace sv4d {
                                         float w = g * lr;
                                         // embeddingInBufVector += vSample * w;
                                         // vSample += vWordIn * w;
-                                        embeddingInBufVector.addVectorWithFactor(vSample, w);
-                                        vSample.addVectorWithFactor(vWordIn, w);
+                                        embeddingInBufVector.fusedMultiplyAdd(vSample, w);
+                                        vSample.fusedMultiplyAdd(vWordIn, w);
                                     }
 
                                     vWordIn += embeddingInBufVector;

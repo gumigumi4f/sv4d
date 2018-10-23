@@ -22,7 +22,7 @@ namespace sv4d {
             float sum();
             sv4d::Vector sigmoid();
             sv4d::Vector softmax(float temperature);
-            void addVectorWithFactor(const sv4d::Vector& vector, const float factor);
+            void fusedMultiplyAdd(const sv4d::Vector& vector, const float factor);
 
             inline float& operator[](int idx) {
                 return data[idx];
