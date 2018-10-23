@@ -303,8 +303,10 @@ namespace sv4d {
                                             rewardLogits[i] += dot;
                                             float g = sv4d::utils::operation::sigmoid(-dot);
                                             float w = g * lr * senseWeight;
-                                            embeddingInBufVector += vWordOut * w;
-                                            embeddingOutBufVector += vSynsetIn * w;
+                                            for (int k = 0; k < embeddingLayerSize; ++k) {
+                                                embeddingInBufVector[k] += vWordOut[k] * w;
+                                                embeddingOutBufVector[k] += vSynsetIn[k] * w;
+                                            }
                                         }
 
                                         // Negative samples:
@@ -328,8 +330,10 @@ namespace sv4d {
                                             float dot = vSynsetIn % vSample;
                                             float g = -sv4d::utils::operation::sigmoid(dot);
                                             float w = g * lr * senseWeight;
-                                            embeddingInBufVector += vSample * w;
-                                            vSample += vSynsetIn * w;
+                                            for (int k = 0; k < embeddingLayerSize; ++k) {
+                                                embeddingInBufVector[k] += vSample[k] * w;
+                                                vSample[k] += vSynsetIn[k] * w;
+                                            }
                                         }
 
                                         // Positive: dictionary pairs for accurate prediction
@@ -351,8 +355,10 @@ namespace sv4d {
                                             float dot = vSynsetIn % vSample;
                                             float g = sv4d::utils::operation::sigmoid(-dot);
                                             float w = (g * lr * betaDict / senseNum);
-                                            embeddingInBufVector += vSample * w;
-                                            vSample += vSynsetIn * w;
+                                            for (int k = 0; k < embeddingLayerSize; ++k) {
+                                                embeddingInBufVector[k] += vSample[k] * w;
+                                                vSample[k] += vSynsetIn[k] * w;
+                                            }
                                         }
 
                                         vSynsetIn += embeddingInBufVector;
@@ -374,7 +380,9 @@ namespace sv4d {
                                         sv4d::Vector& vSenseSelection = senseSelectionOutWeight[lidx];
                                         float& bSenseSelection = senseSelectionOutBias[lidx];
                                         float w = g * initialLearningRate;
-                                        vSenseSelection += featureVectorCache * w;
+                                        for (int k = 0; k < embeddingLayerSize * 3; ++k) {
+                                            vSenseSelection[k] += featureVectorCache[k] * w;
+                                        }
                                         bSenseSelection += w;
                                     }
                                 }
@@ -397,8 +405,10 @@ namespace sv4d {
                                         float dot = vWordIn % vWordOut;
                                         float g = sv4d::utils::operation::sigmoid(-dot);
                                         float w = g * lr;
-                                        embeddingInBufVector += vWordOut * w;
-                                        embeddingOutBufVector += vWordIn * w;
+                                        for (int k = 0; k < embeddingLayerSize; ++k) {
+                                            embeddingInBufVector[k] += vWordOut[k] * w;
+                                            embeddingOutBufVector[k] += vWordIn[k] * w;
+                                        }
                                     }
 
                                     // Negative samples:
@@ -419,8 +429,10 @@ namespace sv4d {
                                         float dot = vWordIn % vSample;
                                         float g = -sv4d::utils::operation::sigmoid(dot);
                                         float w = g * lr;
-                                        embeddingInBufVector += vSample * w;
-                                        vSample += vWordIn * w;
+                                        for (int k = 0; k < embeddingLayerSize; ++k) {
+                                            embeddingInBufVector[k] += vSample[k] * w;
+                                            vSample[k] += vWordIn[k] * w;
+                                        }
                                     }
 
                                     vWordIn += embeddingInBufVector;
