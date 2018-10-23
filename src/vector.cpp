@@ -39,7 +39,7 @@ namespace sv4d {
     sv4d::Vector Vector::sigmoid() {
         sv4d::Vector outputVector(col);
         for (int i = 0; i < col; ++i) {
-            outputVector.data[i] += sv4d::utils::operation::sigmoid(data[i]);
+            outputVector.data[i] = sv4d::utils::operation::sigmoid(data[i]);
         }
         return outputVector;
     }
