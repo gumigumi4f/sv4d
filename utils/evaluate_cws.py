@@ -1,7 +1,6 @@
 import sys
 import numpy as np
 import scipy as sp
-from nltk import tokenize
 
 from sv4d import Model
 
@@ -42,6 +41,10 @@ def extract_feature(document_str, model):
 
 
 def main():
+    use_sense_prob = False
+    if len(sys.argv) >= 4:
+        use_sense_prob = bool(sys.argv[3])
+
     model = Model(sys.argv[1])
     print("Loading vocab...")
     model.load_vocab()
@@ -58,7 +61,7 @@ def main():
         if line == "":
             continue
 
-        num, word1, pos1, word2, pos2, document1, document2, rating_str, _, _, _, _, _, _, _, _, _, _ = line.rstrip().split("\t")
+        _, word1, pos1, word2, pos2, document1, document2, rating_str, _, _, _, _, _, _, _, _, _, _ = line.rstrip().split("\t")
         
         word1 = word1.lower()
         word2 = word2.lower()
@@ -66,8 +69,8 @@ def main():
         feature1 = extract_feature(document1, model)
         feature2 = extract_feature(document2, model)
 
-        prob1, synsets1 = model.calculate_sense_probability(word1, pos1, feature1[0], feature1[1], feature1[2])
-        prob2, synsets2 = model.calculate_sense_probability(word2, pos2, feature2[0], feature2[1], feature2[2])
+        prob1, synsets1 = model.calculate_sense_probability(word1, pos1, feature1[0], feature1[1], feature1[2], use_sense_prob=use_sense_prob)
+        prob2, synsets2 = model.calculate_sense_probability(word2, pos2, feature2[0], feature2[1], feature2[2], use_sense_prob=use_sense_prob)
         
         # Maximum Similarity
         synset1 = synsets1[np.argmax(prob1)]
@@ -86,7 +89,7 @@ def main():
                 similarity += prob1[s1] * prob2[s2] * sim
         average_similarities.append(similarity)
 
-        # Glo Similarity
+        # Global Similarity
         similarity = 1 - sp.spatial.distance.cosine(model[word1], model[word2])
         global_similarities.append(similarity)
         
@@ -98,14 +101,14 @@ def main():
     average_similarity = sp.stats.spearmanr(true_similarities, average_similarities)[0]
     global_similarity = sp.stats.spearmanr(true_similarities, global_similarities)[0]
 
-    print(f"Maximum Similarity:{maximum_similarity * 100.0:.3f}")
-    print(f"Average Similarity:{average_similarity * 100.0:.3f}")
-    print(f"Global Similarity:{global_similarity * 100.0:.3f}")
+    print(f"Maximum Similarity: {maximum_similarity * 100.0:.3f}")
+    print(f"Average Similarity: {average_similarity * 100.0:.3f}")
+    print(f"Global Similarity: {global_similarity * 100.0:.3f}")
 
 
 if __name__ == "__main__":
     if len(sys.argv) <= 2:
-        print("usage: python evaluate_cws.py <model_dir> <cws_file>", file=sys.stderr)
+        print("usage: python evaluate_cws.py <model_dir> <cws_file> [<use_sense_prob>]", file=sys.stderr)
         exit()
 
     main()

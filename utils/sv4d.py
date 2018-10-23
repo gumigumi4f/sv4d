@@ -72,7 +72,7 @@ class Model:
             
             self.lidx2sidx[lidx] = sidx
     
-    def calculate_sense_probability(self, word, pos, contexts, sentence, document, use_sense_freq=False):
+    def calculate_sense_probability(self, word, pos, contexts, sentence, document, use_sense_prob=False):
         if word not in self.synset_vocab:
             raise ValueError("Word %s is not found in vocab" % (word))
 
@@ -80,10 +80,23 @@ class Model:
         if pos not in synset_data:
             return (np.ones((1,)), [word])
             # raise ValueError("Pos %s is not found in synset data" % (pos))
+        
+        contexts = [self.synset_vocab[word] for word in contexts if word in self.synset_vocab]
+        sentence = [self.synset_vocab[word] for word in sentence if word in self.synset_vocab]
+        document = [self.synset_vocab[word] for word in document if word in self.synset_vocab]
 
-        contexts_vector = self.embedding_in_weight[[self.synset_vocab[word] for word in contexts if word in self.synset_vocab]].mean(axis=0)
-        sentence_vector = self.embedding_in_weight[[self.synset_vocab[word] for word in sentence if word in self.synset_vocab]].mean(axis=0)
-        document_vector = self.embedding_in_weight[[self.synset_vocab[word] for word in document if word in self.synset_vocab]].mean(axis=0)
+        if len(contexts) != 0:
+            contexts_vector = self.embedding_in_weight[contexts].mean(axis=0)
+        else:
+            contexts_vector = np.zeros((self.embedding_in_weight.shape[1],))
+        if len(sentence) != 0:
+            sentence_vector = self.embedding_in_weight[sentence].mean(axis=0)
+        else:
+            sentence_vector = np.zeros((self.embedding_in_weight.shape[1],))
+        if len(document) != 0:
+            document_vector = self.embedding_in_weight[document].mean(axis=0)
+        else:
+            document_vector = np.zeros((self.embedding_in_weight.shape[1],))
 
         feature_vector = np.concatenate([contexts_vector, sentence_vector, document_vector])
 
@@ -93,6 +106,8 @@ class Model:
             synset_logits.append(dot)
         
         synset_prob = self._softmax(synset_logits)
+        if use_sense_prob:
+            synset_prob = synset_prob * np.array([self.lemma_prob[lidx] for lidx in synset_data[pos]])
         return (synset_prob, [self.sidx2synset[self.lidx2sidx[lidx]] for lidx in synset_data[pos]])
 
     def load_weight(self):
