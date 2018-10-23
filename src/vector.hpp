@@ -18,10 +18,11 @@ namespace sv4d {
             void setZero();
             void setRandomUniform(float min, float max);
             std::vector<float>& getData();
+
             float sum();
             sv4d::Vector sigmoid();
             sv4d::Vector softmax(float temperature);
-            void clipByValue(float min, float max);
+            void addVectorWithFactor(const sv4d::Vector& vector, const float factor);
 
             inline float& operator[](int idx) {
                 return data[idx];

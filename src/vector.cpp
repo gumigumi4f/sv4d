@@ -67,13 +67,9 @@ namespace sv4d {
         return outputVector;
     }
 
-    void Vector::clipByValue(float min, float max) {
-        for (float& x : data) {
-            if (x > max) {
-                x = max;
-            } else if (x < min) {
-                x = min;
-            }
+    void Vector::addVectorWithFactor(const sv4d::Vector& vector, const float factor) {
+        for (int i = 0; i < col; ++i) {
+            data[i] += vector.data[i] * factor;
         }
     }
 

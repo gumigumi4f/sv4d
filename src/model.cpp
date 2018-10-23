@@ -305,10 +305,8 @@ namespace sv4d {
                                             float w = g * lr * senseWeight;
                                             // embeddingInBufVector += vWordOut * w;
                                             // embeddingOutBufVector += vSynsetIn * w;
-                                            for (int k = 0; k < embeddingLayerSize; ++k) {
-                                                embeddingInBufVector[k] += vWordOut[k] * w;
-                                                embeddingOutBufVector[k] += vSynsetIn[k] * w;
-                                            }
+                                            embeddingInBufVector.addVectorWithFactor(vWordOut, w);
+                                            embeddingOutBufVector.addVectorWithFactor(vSynsetIn, w);
                                         }
 
                                         // Negative samples:
@@ -332,12 +330,8 @@ namespace sv4d {
                                             float dot = vSynsetIn % vSample;
                                             float g = -sv4d::utils::operation::sigmoid(dot);
                                             float w = g * lr * senseWeight;
-                                            // embeddingInBufVector += vSample * w;
-                                            // vSample += vSynsetIn * w;
-                                            for (int k = 0; k < embeddingLayerSize; ++k) {
-                                                embeddingInBufVector[k] += vSample[k] * w;
-                                                vSample[k] += vSynsetIn[k] * w;
-                                            }
+                                            embeddingInBufVector.addVectorWithFactor(vSample, w);
+                                            vSample.addVectorWithFactor(vSynsetIn, w);
                                         }
 
                                         // Positive: dictionary pairs for accurate prediction
@@ -363,10 +357,8 @@ namespace sv4d {
                                             float w = (g * lr * betaDict / senseNum);
                                             // embeddingInBufVector += vSample * w;
                                             // vSample += vSynsetIn * w;
-                                            for (int k = 0; k < embeddingLayerSize; ++k) {
-                                                embeddingInBufVector[k] += vSample[k] * w;
-                                                vSample[k] += vSynsetIn[k] * w;
-                                            }
+                                            embeddingInBufVector.addVectorWithFactor(vSample, w);
+                                            vSample.addVectorWithFactor(vSynsetIn, w);
                                         }
 
                                         vSynsetIn += embeddingInBufVector;
@@ -389,9 +381,8 @@ namespace sv4d {
                                         float& bSenseSelection = senseSelectionOutBias[lidx];
                                         float w = g * initialLearningRate;
                                         // vSenseSelection += featureVectorCache * w;
-                                        for (int k = 0; k < embeddingLayerSize * 3; ++k) {
-                                            vSenseSelection[k] += featureVectorCache[k] * w;
-                                        }
+                                        // bSenseSelection += w;
+                                        vSenseSelection.addVectorWithFactor(featureVectorCache, w);
                                         bSenseSelection += w;
                                     }
                                 }
@@ -416,10 +407,8 @@ namespace sv4d {
                                         float w = g * lr;
                                         // embeddingInBufVector += vWordOut * w;
                                         // embeddingOutBufVector += vWordIn * w;
-                                        for (int k = 0; k < embeddingLayerSize; ++k) {
-                                            embeddingInBufVector[k] += vWordOut[k] * w;
-                                            embeddingOutBufVector[k] += vWordIn[k] * w;
-                                        }
+                                        embeddingInBufVector.addVectorWithFactor(vWordOut, w);
+                                        embeddingOutBufVector.addVectorWithFactor(vWordIn, w);
                                     }
 
                                     // Negative samples:
@@ -442,10 +431,8 @@ namespace sv4d {
                                         float w = g * lr;
                                         // embeddingInBufVector += vSample * w;
                                         // vSample += vWordIn * w;
-                                        for (int k = 0; k < embeddingLayerSize; ++k) {
-                                            embeddingInBufVector[k] += vSample[k] * w;
-                                            vSample[k] += vWordIn[k] * w;
-                                        }
+                                        embeddingInBufVector.addVectorWithFactor(vSample, w);
+                                        vSample.addVectorWithFactor(vWordIn, w);
                                     }
 
                                     vWordIn += embeddingInBufVector;
