@@ -370,7 +370,7 @@ namespace sv4d {
                                     for (int i = 0; i < senseNum; ++i) {
                                         int lidx = synsetLemmaIndices[i];
                                         float prob = sv4d::utils::operation::sigmoid(senseSelectionLogits[i]);
-                                        float g = rewardProb[i] * (1 - prob) + (1.0f - rewardProb[i]) * -prob;
+                                        float g = rewardProb[i] * (1.0f - prob) - (1.0f - rewardProb[i]) * prob;
                                         sv4d::Vector& vSenseSelection = senseSelectionOutWeight[lidx];
                                         float& bSenseSelection = senseSelectionOutBias[lidx];
                                         float w = g * initialLearningRate;
