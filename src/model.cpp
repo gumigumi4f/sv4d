@@ -370,7 +370,6 @@ namespace sv4d {
 
                                     // sense selection (update)
                                     sv4d::Vector rewardProb = rewardLogits.softmax(1.0);
-                                    rewardProb.clipByValue(0.1, 0.9);
 
                                     // Update sense selection weight.
                                     //   forward: x = v_feature' * v_sense_selection + v_sense_bias

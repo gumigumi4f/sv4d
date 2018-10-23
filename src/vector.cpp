@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <random>
+#include <limits>
 
 namespace sv4d {
 
@@ -48,7 +49,7 @@ namespace sv4d {
         if (col == 1) {
             outputVector[0] = 1.0f;
         } else {
-            float max = 0.0f;
+            float max = std::numeric_limits<float>::min();
             for (int i = 0; i < col; ++i) {
                 float logit = data[i] / temperature;
                 outputVector.data[i] = logit;
