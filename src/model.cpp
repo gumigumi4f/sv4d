@@ -346,9 +346,11 @@ namespace sv4d {
                                             if (dictPair.size() == 0) {
                                                 break;
                                             }
-                                            int sample = dictPair[synsetDictPair.dpos++];
-                                            if (synsetDictPair.dpos == dictPair.size()) {
+                                            int sample = dictPair[synsetDictPair.dpos];
+                                            if (synsetDictPair.dpos == dictPair.size() - 1) {
                                                 synsetDictPair.dpos = 0;
+                                            } else {
+                                                synsetDictPair.dpos += 1;
                                             }
                                             sv4d::Vector& vSample = embeddingOutWeight[sample];
                                             rewardLogits[i] += (vWordOutIn % vSample) * betaReward;
