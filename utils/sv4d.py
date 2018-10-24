@@ -108,6 +108,7 @@ class Model:
         synset_prob = self._softmax(synset_logits)
         if use_sense_prob:
             synset_prob = synset_prob * np.array([self.lemma_prob[lidx] for lidx in synset_data[pos]])
+            synset_prob = synset_prob / np.sum(synset_prob)
         return (synset_prob, [self.sidx2synset[self.lidx2sidx[lidx]] for lidx in synset_data[pos]])
 
     def load_weight(self):

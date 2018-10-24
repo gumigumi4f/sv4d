@@ -39,7 +39,7 @@ namespace sv4d {
     sv4d::Vector Vector::sigmoid() {
         sv4d::Vector outputVector(col);
         for (int i = 0; i < col; ++i) {
-            outputVector.data[i] += sv4d::utils::operation::sigmoid(data[i]);
+            outputVector.data[i] = sv4d::utils::operation::sigmoid(data[i]);
         }
         return outputVector;
     }
@@ -67,13 +67,9 @@ namespace sv4d {
         return outputVector;
     }
 
-    void Vector::clipByValue(float min, float max) {
-        for (float& x : data) {
-            if (x > max) {
-                x = max;
-            } else if (x < min) {
-                x = min;
-            }
+    void Vector::fusedMultiplyAdd(const sv4d::Vector& vector, const float factor) {
+        for (int i = 0; i < col; ++i) {
+            data[i] += vector.data[i] * factor;
         }
     }
 
