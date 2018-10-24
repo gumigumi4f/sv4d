@@ -71,6 +71,18 @@ class Model:
                 self.widx2lidxs[widx][pos].append(lidx)
             
             self.lidx2sidx[lidx] = sidx
+
+    def load_weight(self):
+        if not self.model_dir:
+            raise ValueError("Model directory is empty")
+        if not self.lemma_vocab:
+            raise ValueError("Vocab is not loaded")
+
+        self.embedding_in_weight = self._read_weight_from_file_gensim(os.path.join(self.model_dir, "embedding_in_weight"), self.synset_vocab)
+        self.embedding_out_weight = self._read_weight_from_file_gensim(os.path.join(self.model_dir, "embedding_out_weight"), self.synset_vocab)
+        self.sense_selection_out_weight = self._read_weight_from_file_gensim(os.path.join(self.model_dir, "sense_selection_out_weight"), self.lemma_vocab)
+        self.sense_selection_out_bias = self._read_weight_from_file_gensim(os.path.join(self.model_dir, "sense_selection_out_bias"), self.lemma_vocab)
+        self.sense_selection_out_bias = self.sense_selection_out_bias.reshape(-1)
     
     def calculate_sense_probability(self, word, pos, contexts, sentence, document, use_sense_prob=False):
         if word not in self.synset_vocab:
@@ -111,18 +123,6 @@ class Model:
             synset_prob = synset_prob / np.sum(synset_prob)
         return (synset_prob, [self.sidx2synset[self.lidx2sidx[lidx]] for lidx in synset_data[pos]])
 
-    def load_weight(self):
-        if not self.model_dir:
-            raise ValueError("Model directory is empty")
-        if not self.lemma_vocab:
-            raise ValueError("Vocab is not loaded")
-
-        self.embedding_in_weight = self._read_weight_from_file_gensim(os.path.join(self.model_dir, "embedding_in_weight"), self.synset_vocab)
-        self.embedding_out_weight = self._read_weight_from_file_gensim(os.path.join(self.model_dir, "embedding_out_weight"), self.synset_vocab)
-        self.sense_selection_out_weight = self._read_weight_from_file_gensim(os.path.join(self.model_dir, "sense_selection_out_weight"), self.lemma_vocab)
-        self.sense_selection_out_bias = self._read_weight_from_file_gensim(os.path.join(self.model_dir, "sense_selection_out_bias"), self.lemma_vocab)
-        self.sense_selection_out_bias = self.sense_selection_out_bias.reshape(-1)
-    
     def _softmax(self, a):
         c = np.max(a)
         exp_a = np.exp(a - c)
