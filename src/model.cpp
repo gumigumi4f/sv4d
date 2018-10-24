@@ -62,6 +62,7 @@ namespace sv4d {
         startTime = std::chrono::system_clock::now();
         trainedWordCount = 0;
         auto threads = std::vector<std::thread>();
+        printf("Training model:  \n");
         if (threadNum > 1) {
             for (int i = 0; i < threadNum; i++) {
                 threads.push_back(std::thread(&Model::trainingThread, this, i));
@@ -72,6 +73,7 @@ namespace sv4d {
         } else {
             Model::trainingThread(0);
         }
+        printf("\n");
     }
 
     void Model::initializeWeight() {
