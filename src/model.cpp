@@ -332,6 +332,8 @@ namespace sv4d {
                                             float dot = vSynsetIn % vSample;
                                             float g = -sv4d::utils::operation::sigmoid(dot);
                                             float w = g * lr * senseWeight;
+                                            // embeddingInBufVector += vSample * w;
+                                            // vSample += vSynsetIn * w;
                                             embeddingInBufVector.fusedMultiplyAdd(vSample, w);
                                             vSample.fusedMultiplyAdd(vSynsetIn, w);
                                         }
@@ -381,7 +383,7 @@ namespace sv4d {
                                         float g = rewardProb[i] * (1.0f - prob) - (1.0f - rewardProb[i]) * prob;
                                         sv4d::Vector& vSenseSelection = senseSelectionOutWeight[lidx];
                                         float& bSenseSelection = senseSelectionOutBias[lidx];
-                                        float w = g * initialLearningRate;
+                                        float w = g * lr;
                                         // vSenseSelection += featureVectorCache * w;
                                         // bSenseSelection += w;
                                         vSenseSelection.fusedMultiplyAdd(featureVectorCache, w);
