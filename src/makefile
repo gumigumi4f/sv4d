@@ -4,7 +4,7 @@ CXX = c++
 CXXFLAGS = -std=c++11 -pthread -Wall -Wextra -Wno-unused-result
 OBJS = $(BINDIR)/utils.o $(BINDIR)/vector.o $(BINDIR)/matrix.o $(BINDIR)/options.o $(BINDIR)/vocab.o $(BINDIR)/model.o
 
-all: CXXFLAGS += -Ofast -mtune=native -march=native -funroll-loops -flto
+all: CXXFLAGS += -Ofast -march=native -mtune=native -funroll-loops -flto
 all: sv4d
 
 debug: CXXFLAGS += -O0 -g -fno-inline
