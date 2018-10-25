@@ -47,7 +47,7 @@ namespace sv4d {
     sv4d::Vector Vector::softmax(float temperature) {
         sv4d::Vector outputVector(col);
         if (col == 1) {
-            outputVector[0] = 1.0f;
+            outputVector.data[0] = 1.0f;
         } else {
             float max = std::numeric_limits<float>::lowest();
             for (int i = 0; i < col; ++i) {
