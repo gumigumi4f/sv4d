@@ -112,7 +112,7 @@ namespace sv4d {
         subsamplingFactorTable.resize(vocab.wordVocabSize);
         for (int i = 0; i < vocab.wordVocabSize; ++i) {
             if (vocab.wordFreq[i] == 0) {
-                subsamplingFactorTable[i] = 0.0;
+                subsamplingFactorTable[i] = 0.0f;
             } else {
                 float factor = (std::sqrt(vocab.wordFreq[i] / (subSamplingFactor * vocab.totalWordsNum)) + 1) * (subSamplingFactor * vocab.totalWordsNum) / vocab.wordFreq[i];
                 subsamplingFactorTable[i] = factor;
@@ -358,7 +358,7 @@ namespace sv4d {
                                             rewardLogits[i] += (vWordOutIn % vSample) * betaReward;
                                             float dot = vSynsetIn % vSample;
                                             float g = sv4d::utils::operation::sigmoid(-dot);
-                                            float w = (g * lr * betaDict / senseNum);
+                                            float w = g * lr * senseWeight;
                                             // embeddingInBufVector += vSample * w;
                                             // vSample += vSynsetIn * w;
                                             embeddingInBufVector.fusedMultiplyAdd(vSample, w);

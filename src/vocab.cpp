@@ -61,6 +61,9 @@ namespace sv4d {
             }
 
             for (auto word : sv4d::utils::string::split(linebuf, ' ')) {
+                if (wordStats.find(word) == wordStats.end()) {
+                    wordStats[word] = 0;
+                }
                 ++wordStats[word];
             }
 
