@@ -1,7 +1,7 @@
 BINDIR=../bin
 
 CXX = c++
-CXXFLAGS = -std=c++11 -pthread -Wall -Wextra -Wno-unused-result
+CXXFLAGS = -std=c++11 -pthread -Wall -Wextra
 OBJS = $(BINDIR)/utils.o $(BINDIR)/vector.o $(BINDIR)/matrix.o $(BINDIR)/options.o $(BINDIR)/vocab.o $(BINDIR)/model.o
 
 all: CXXFLAGS += -Ofast -march=native -mtune=native -funroll-loops -flto
