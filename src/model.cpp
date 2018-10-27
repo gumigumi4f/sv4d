@@ -148,6 +148,7 @@ namespace sv4d {
         float betaReward = initialBetaReward;
 
         // cache
+        int documentWordCount = 0;
         auto documentCache = std::vector<std::vector<int>>();
         auto outputWidxCandidateCache = std::vector<int>();
         outputWidxCandidateCache.reserve(windowSize * 2);
@@ -166,6 +167,7 @@ namespace sv4d {
                 std::getline(fin, linebuf);
                 if (sv4d::utils::string::trim(linebuf) == "<doc>") {
                     documentCache.clear();
+                    documentWordCount = 0;
                     break;
                 }
             }
@@ -175,6 +177,7 @@ namespace sv4d {
                 linebuf = sv4d::utils::string::trim(linebuf);
                 if (linebuf == "<doc>") {
                     documentCache.clear();
+                    documentWordCount = 0;
                 } else if (linebuf == "</doc>") {
                     if (documentCache.size() == 0) {
                         continue;
@@ -446,8 +449,10 @@ namespace sv4d {
                             }
                         }
 
-                        trainedWordCount += sentenceSize;
+                        documentWordCount += sentenceSize;
                     }
+
+                    trainedWordCount += documentWordCount;
 
                     if (fin.tellg() > fileSize / threadNum * (threadId + 1)) {
                         break;
@@ -496,7 +501,7 @@ namespace sv4d {
                     }
 
                     if (widxes.size() < 5) {
-                        trainedWordCount += widxes.size();
+                        documentWordCount += widxes.size();
                         continue;
                     }
                     documentCache.push_back(widxes);
