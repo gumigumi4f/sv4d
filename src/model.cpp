@@ -361,7 +361,7 @@ namespace sv4d {
                                             rewardLogits[i] += (vWordOutIn % vSample) * betaReward;
                                             float dot = vSynsetIn % vSample;
                                             float g = sv4d::utils::operation::sigmoid(-dot);
-                                            float w = g * lr * senseWeight;
+                                            float w = g * lr * senseWeight * betaDict;
                                             // embeddingInBufVector += vSample * w;
                                             // vSample += vSynsetIn * w;
                                             embeddingInBufVector.fusedMultiplyAdd(vSample, w);
