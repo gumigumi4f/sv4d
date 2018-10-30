@@ -227,6 +227,9 @@ namespace sv4d {
 
     void Vocab::save(const std::string& filepath) {
         std::ofstream fout(filepath);
+        if (fout.fail()) {
+            throw std::runtime_error("Cannot open vocab data file");
+        }
 
         fout << lemmaVocabSize << " " << synsetVocabSize << " " << wordVocabSize << "\n";
         fout << totalWordsNum << " " << totalSentenceNum << " " << totalDocumentNum << "\n";

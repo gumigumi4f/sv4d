@@ -123,6 +123,9 @@ namespace sv4d {
 
     void Model::initializeFileSize() {
         std::ifstream fin(trainingCorpus);
+        if (fin.fail()) {
+            throw std::runtime_error("Cannot open training data file");
+        }
         fin.seekg(0, fin.end);
         fileSize = fin.tellg();
     }
@@ -132,6 +135,9 @@ namespace sv4d {
 
         // file
         std::ifstream fin(trainingCorpus);
+        if (fin.fail()) {
+            throw std::runtime_error("Cannot open training data file");
+        }
 
         // random
         std::mt19937 mt(495 + threadId);
@@ -616,6 +622,9 @@ namespace sv4d {
 
     void Model::saveEmbeddingInWeight(const std::string& filepath, bool binary) {
         std::ofstream fout(filepath, std::ios::out | std::ios::binary | std::ios::trunc);
+        if (fout.fail()) {
+            throw std::runtime_error("Cannot open weight file");
+        }
         fout << vocab.synsetVocabSize << " " << embeddingLayerSize << "\n";
         for (int sidx = 0; sidx < vocab.synsetVocabSize; ++sidx) {
             auto synset = vocab.sidx2Synset[sidx];
@@ -637,7 +646,7 @@ namespace sv4d {
         std::string linebuf;
         std::ifstream fin(filepath, std::ios::in | std::ios::binary);
         if (fin.fail()) {
-            return;
+            throw std::runtime_error("Cannot open weight file");
         }
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
@@ -669,6 +678,9 @@ namespace sv4d {
 
     void Model::saveEmbeddingOutWeight(const std::string& filepath, bool binary) {
         std::ofstream fout(filepath, std::ios::out | std::ios::binary | std::ios::trunc);
+        if (fout.fail()) {
+            throw std::runtime_error("Cannot open weight file");
+        }
         fout << vocab.wordVocabSize << " " << embeddingLayerSize << "\n";
         for (int widx = 0; widx < vocab.wordVocabSize; ++widx) {
             auto word = vocab.sidx2Synset[widx];
@@ -690,7 +702,7 @@ namespace sv4d {
         std::string linebuf;
         std::ifstream fin(filepath, std::ios::in | std::ios::binary);
         if (fin.fail()) {
-            return;
+            throw std::runtime_error("Cannot open weight file");
         }
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
@@ -722,6 +734,9 @@ namespace sv4d {
 
     void Model::saveSenseSelectionOutWeight(const std::string& filepath, bool binary) {
         std::ofstream fout(filepath, std::ios::out | std::ios::binary | std::ios::trunc);
+        if (fout.fail()) {
+            throw std::runtime_error("Cannot open weight file");
+        }
         fout << vocab.lemmaVocabSize << " " << (embeddingLayerSize * 3) << "\n";
         for (int lidx = 0; lidx < vocab.lemmaVocabSize; ++lidx) {
             auto lemma = vocab.lidx2Lemma[lidx];
@@ -743,7 +758,7 @@ namespace sv4d {
         std::string linebuf;
         std::ifstream fin(filepath, std::ios::in | std::ios::binary);
         if (fin.fail()) {
-            return;
+            throw std::runtime_error("Cannot open weight file");
         }
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
@@ -775,6 +790,9 @@ namespace sv4d {
 
     void Model::saveSenseSelectionBiasWeight(const std::string& filepath, bool binary) {
         std::ofstream fout(filepath, std::ios::out | std::ios::binary | std::ios::trunc);
+        if (fout.fail()) {
+            throw std::runtime_error("Cannot open weight file");
+        }
         fout << vocab.lemmaVocabSize << " " << 1 << "\n";
         for (int lidx = 0; lidx < vocab.lemmaVocabSize; ++lidx) {
             auto lemma = vocab.lidx2Lemma[lidx];
@@ -794,7 +812,7 @@ namespace sv4d {
         std::string linebuf;
         std::ifstream fin(filepath, std::ios::in | std::ios::binary);
         if (fin.fail()) {
-            return;
+            throw std::runtime_error("Cannot open weight file");
         }
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');

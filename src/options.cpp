@@ -43,8 +43,7 @@ namespace sv4d {
 
             try {
                 if (args[i] == "-h" || args[i] == "-help") {
-                    std::cerr << "Usage: sv4d <command> <options>" << std::endl;
-                    exit(EXIT_FAILURE);
+                    throw std::runtime_error("help");
                 } else if (args[i] == "-model_dir") {
                     modelDir = std::string(args.at(i + 1));
                     if (modelDir.back() != '/') {
