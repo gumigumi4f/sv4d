@@ -24,8 +24,14 @@ int main(int argc, char** argv) {
     std::string command(args[1]);
     if (command == "training") {
         sv4d::Vocab vocab = sv4d::Vocab();
-        vocab.build(opt);
-        vocab.save(opt.modelDir + "vocab.txt");
+        try {
+            vocab.build(opt);
+            vocab.save(opt.modelDir + "vocab.txt");
+        } catch (const std::exception& e) {
+            std::cerr << e.what() << '\n';
+            exit(EXIT_FAILURE);
+        }
+
         sv4d::Model model = sv4d::Model(opt, vocab);
         model.initialize();
         model.training();
@@ -35,13 +41,25 @@ int main(int argc, char** argv) {
         model.saveSenseSelectionBiasWeight(opt.modelDir + "sense_selection_out_bias", opt.binary);
     } else if (command == "word_nearest_neighbour") {
         sv4d::Vocab vocab = sv4d::Vocab();
-        vocab.load(opt.modelDir + "vocab.txt");
+        try {
+            vocab.load(opt.modelDir + "vocab.txt");
+        } catch (const std::exception& e) {
+            std::cerr << e.what() << '\n';
+            exit(EXIT_FAILURE);
+        }
+
         sv4d::Model model = sv4d::Model(opt, vocab);
         model.loadEmbeddingInWeight(opt.modelDir + "embedding_in_weight", opt.binary);
         model.wordNearestNeighbour();
     } else if (command == "synset_nearest_neighbour") {
         sv4d::Vocab vocab = sv4d::Vocab();
-        vocab.load(opt.modelDir + "vocab.txt");
+        try {
+            vocab.load(opt.modelDir + "vocab.txt");
+        } catch (const std::exception& e) {
+            std::cerr << e.what() << '\n';
+            exit(EXIT_FAILURE);
+        }
+        
         sv4d::Model model = sv4d::Model(opt, vocab);
         model.loadEmbeddingInWeight(opt.modelDir + "embedding_in_weight", opt.binary);
         model.synsetNearestNeighbour();

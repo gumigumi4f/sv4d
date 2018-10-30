@@ -49,6 +49,9 @@ namespace sv4d {
         auto wordStats = std::unordered_map<std::string, int>();
         
         std::ifstream corpusfin(opt.trainingCorpus);
+        if (corpusfin.fail()) {
+            throw std::runtime_error("Cannot open training corpus file");
+        }
         while (std::getline(corpusfin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);
             if (linebuf == "<doc>") {
@@ -103,6 +106,9 @@ namespace sv4d {
         printf("Reading sense file:  \n");
 
         std::ifstream synsetfin(opt.synsetDataFile);
+        if (synsetfin.fail()) {
+            throw std::runtime_error("Cannot open synset data file");
+        }
         while (std::getline(synsetfin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);
             auto data = sv4d::utils::string::split(linebuf, ' ');
@@ -261,6 +267,9 @@ namespace sv4d {
     void Vocab::load(const std::string& filepath) {
         std::string linebuf;
         std::ifstream fin(filepath);
+        if (fin.fail()) {
+            throw std::runtime_error("Cannot open vocab data file");
+        }
 
         std::getline(fin, linebuf);
         auto sizes = sv4d::utils::string::split(sv4d::utils::string::trim(linebuf), ' ');
