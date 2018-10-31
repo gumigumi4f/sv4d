@@ -9,7 +9,7 @@ void printUsage() {
     std::cerr
         << "usage: sv4d <command> <options>\n\n"
         << "The commands supported by sv4d are:\n\n"
-        << "  training                  train a sense vector and wsd modules\n"
+        << "  training                  train a sense vector and wsd module\n"
         << "  word_nearest_neighbour    query for word nearest neighbour\n"
         << "  synset_nearest_neighbour  query for synset nearest neighbour\n"
         << std::endl;
@@ -33,6 +33,12 @@ void printOptionsHelp() {
         << "  -sub_sampling_factor      threshold for occurrence of words [" << options.subSamplingFactor << "]\n"
         << "  -initial_learning_rate    initial learning rate [" << options.initialLearningRate << "]\n"
         << "  -min_learning_rate        min learning rate [" << options.minLearningRate << "]\n"
+        << "  -initial_temperature      initial softmax temperature [" << options.initialTemperature << "]\n"
+        << "  -min_temperature          min softmax temperature [" << options.minTemperature << "]\n"
+        << "  -initial_beta_dict        initial beta dict [" << options.initialBetaDict << "]\n"
+        << "  -min_beta_dict            min beta dict [" << options.minBetaDict << "]\n"
+        << "  -initial_beta_reward      initial beta reward [" << options.initialBetaReward << "]\n"
+        << "  -min_beta_reward          min beta reward [" << options.minBetaReward << "]\n"
         << std::endl;
 }
 
