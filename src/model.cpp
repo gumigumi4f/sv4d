@@ -464,31 +464,23 @@ namespace sv4d {
                         break;
                     }
 
-                    float rate = (1 - trainedWordCount / (float)(epochs * vocab.totalWordsNum + 1));
-                    lr = initialLearningRate * rate;
-                    if (lr < minLearningRate) {
-                        lr = minLearningRate;
-                    }
-                    temperature = initialTemperature * rate;
-                    if (temperature < minTemperature) {
+                    float progress = trainedWordCount / (float)(epochs * vocab.totalWordsNum + 1);
+                    float rate = 1.0f - progress;
+                    lr = (initialLearningRate - minLearningRate) * rate + minLearningRate;
+                    betaDict = (initialBetaDict - minBetaDict) * rate + minBetaDict;
+                    betaReward = (initialBetaReward - minBetaReward) * rate + minBetaReward;
+                    if (progress <= 0.5) {
+                        temperature = (initialTemperature - minTemperature) * (1.0f - progress * 2) + minTemperature;
+                    } else {
                         temperature = minTemperature;
-                    }
-                    betaDict = initialBetaDict * rate;
-                    if (betaDict < minBetaDict) {
-                        betaDict = minBetaDict;
-                    }
-                    betaReward = initialBetaReward * rate;
-                    if (betaReward < minBetaReward) {
-                        betaReward = minBetaReward;
                     }
 
                     // print log
-                    float progress = trainedWordCount / (float)(epochs * vocab.totalWordsNum + 1) * 100.0f;
                     auto now = std::chrono::system_clock::now();
                     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
                     float speed = trainedWordCount / (float)((elapsed + 1) * threadNum);
                     float eta = ((float)(epochs * vocab.totalWordsNum) / (trainedWordCount + 1) * elapsed - elapsed) / 60000.0f;
-                    printf("%cAlpha: %f  Progress: %.2f%%  Words/thread/sec: %.2fk  Remaining: %.2fm  ", 13, lr, progress, speed, eta);
+                    printf("%cAlpha: %f  Progress: %.2f%%  Words/thread/sec: %.2fk  Remaining: %.2fm  ", 13, lr, progress * 100.0f, speed, eta);
                     fflush(stdout);
                 } else if (linebuf == "") {
                     continue;
