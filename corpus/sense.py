@@ -10,8 +10,8 @@ from nltk.corpus import stopwords
 from nltk.parse.corenlp import CoreNLPParser
 
 
-use_stopwords = True
 use_glossdisambiguated = True
+use_example = True
 
 
 class SynsetGloss(object):
@@ -43,6 +43,35 @@ class SynsetGloss(object):
         return [x.lower() for x in self.tokenizer.tokenize(definition)]
 
 
+class SynsetExample(object):
+    def __init__(self):
+        self.synset_example = {}
+        self.tokenizer = CoreNLPParser(url='http://localhost:42636')
+
+        self.use_babelnet = True
+        if self.use_babelnet:
+            from py4j.java_gateway import JavaGateway
+            gateway = JavaGateway() 
+            self.sense = gateway.entry_point
+
+    def __getitem__(self, name):
+        if name not in self.synset_example:
+            self.synset_example[name] = self.get_synset_example(name)
+        
+        return self.synset_example[name]
+    
+    def get_synset_example(self, name):
+        synset = wn.synset(name)
+        if self.use_babelnet:
+            synset_id = 'wn:{}{}'.format(str(synset.offset()).zfill(8), synset.pos())
+            example = self.sense.getExampleByWnSynsetId(synset_id)
+            if not example:
+                example = " ".join(synset.examples()).strip()
+        else:
+            example = " ".join(synset.examples()).strip()
+        return [x.lower() for x in self.tokenizer.tokenize(example)]
+
+
 class SynsetGlossRelation(object):
     def __init__(self):
         self.synset_gloss_relation = {}
@@ -71,6 +100,7 @@ class SynsetGlossRelation(object):
 
 
 synset_gloss = SynsetGloss()
+synset_example = SynsetExample()
 synset_gloss_relation = SynsetGlossRelation()
 
 
@@ -88,6 +118,17 @@ def get_synsets_pair(word, synsets, stwords, vocab):
                 }
             else:
                 gloss_data[synset.name()][gloss_word]["freq"] += 1
+
+        if use_example:
+            example_words = synset_example[synset.name()]
+            for example_word in example_words:
+                if example_word not in gloss_data[synset.name()]:
+                    gloss_data[synset.name()][example_word] = {
+                        "freq": 1,
+                        "graph_distance": 1,
+                    }
+                else:
+                    gloss_data[synset.name()][example_word]["freq"] += 1
 
         related_synsets = synset.also_sees() \
                           + synset.attributes() \
@@ -122,8 +163,11 @@ def get_synsets_pair(word, synsets, stwords, vocab):
             unique_related_synsets.append(related_synset)
 
         expanded_gloss_words = []
+        expanded_example_words = []
         for related_synset in unique_related_synsets:
             expanded_gloss_words += synset_gloss[related_synset.name()]
+            if use_example:
+                expanded_example_words += synset_example[related_synset.name()]
 
         for gloss_word in expanded_gloss_words:
             if gloss_word not in gloss_data[synset.name()]:
@@ -142,6 +186,16 @@ def get_synsets_pair(word, synsets, stwords, vocab):
                 }
             else:
                 gloss_data[synset.name()][gloss_word]["freq"] += 1
+        
+        for example_word in expanded_example_words:
+            if example_word not in gloss_data[synset.name()]:
+                gloss_data[synset.name()][example_word] = {
+                    "freq": 1,
+                    "graph_distance": 2,
+                }
+            else:
+                gloss_data[synset.name()][example_word]["freq"] += 1
+        
     
     for synset in synsets:
         for gloss_word in gloss_data[synset.name()].keys():
