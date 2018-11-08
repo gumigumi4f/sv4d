@@ -465,14 +465,15 @@ namespace sv4d {
                     }
 
                     float progress = trainedWordCount / (float)(epochs * vocab.totalWordsNum + 1);
-                    float rate = 1.0f - progress;
-                    lr = (initialLearningRate - minLearningRate) * rate + minLearningRate;
-                    betaDict = (initialBetaDict - minBetaDict) * rate + minBetaDict;
-                    betaReward = (initialBetaReward - minBetaReward) * rate + minBetaReward;
+                    lr = (initialLearningRate - minLearningRate) * (1.0f - progress) + minLearningRate;
                     if (progress <= 0.5) {
                         temperature = (initialTemperature - minTemperature) * (1.0f - progress * 2) + minTemperature;
+                        betaDict = (initialBetaDict - minBetaDict) * (1.0f - progress * 2) + minBetaDict;
+                        betaReward = (initialBetaReward - minBetaReward) * (1.0f - progress * 2) + minBetaReward;
                     } else {
                         temperature = minTemperature;
+                        betaDict = minBetaDict;
+                        betaReward = minBetaReward;
                     }
 
                     // print log
