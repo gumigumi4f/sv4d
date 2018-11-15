@@ -1,4 +1,5 @@
 import sys
+import more_itertools
 import numpy as np
 import scipy as sp
 
@@ -6,20 +7,22 @@ from sv4d import Model
 
 
 def extract_feature(document_str, model):
-    documents = [x.lower() for x in document_str.split(" ") if x.lower() in model.synset_vocab]
-    
-    sentences = []
-    flag = False
+    document = []
+    sentence = []
+    target_sent_row = 0
+    current_row = 0
     for word in document_str.split(" "):
         if word == ".":
-            if flag:
-                break
-            sentences = []
+            document.append(sentence)
+            sentence = []
+            current_row += 1
         elif word == "<b>":
-            flag = True
+            target_sent_row = current_row
         else:
             if word.lower() in model.synset_vocab:
-                sentences.append(word.lower())
+                sentence.append(word.lower())
+    else:
+        document.append(sentence)
     
     bcontexts = []
     bflag = True
@@ -37,7 +40,7 @@ def extract_feature(document_str, model):
                 acontexts.append(word.lower())
     
     contexts = bcontexts[-5:] + acontexts[:5]
-    return (contexts, sentences, documents)
+    return (contexts, document[target_sent_row], list(more_itertools.flatten(document[max(0, target_sent_row - 1):min(len(document), target_sent_row + 1)])))
 
 
 def main():

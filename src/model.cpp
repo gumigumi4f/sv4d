@@ -6,6 +6,7 @@
 #include "vector.hpp"
 #include "utils.hpp"
 #include <vector>
+#include <algorithm>
 #include <thread>
 #include <fstream>
 #include <chrono>
@@ -160,8 +161,8 @@ namespace sv4d {
         outputWidxCandidateCache.reserve(windowSize * 2);
         auto subSampledCache = std::vector<bool>();
         subSampledCache.reserve(4096);
+        auto sentenceVectorsCache = std::vector<sv4d::Vector>();
         sv4d::Vector documentVectorCache = sv4d::Vector(embeddingLayerSize);
-        sv4d::Vector sentenceVectorCache = sv4d::Vector(embeddingLayerSize);
         sv4d::Vector contextVectorCache = sv4d::Vector(embeddingLayerSize);
         sv4d::Vector featureVectorCache = sv4d::Vector(embeddingLayerSize * 3);
 
@@ -173,6 +174,7 @@ namespace sv4d {
                 std::getline(fin, linebuf);
                 if (sv4d::utils::string::trim(linebuf) == "<doc>") {
                     documentCache.clear();
+                    sentenceVectorsCache.clear();
                     documentWordCount = 0;
                     break;
                 }
@@ -183,36 +185,48 @@ namespace sv4d {
                 linebuf = sv4d::utils::string::trim(linebuf);
                 if (linebuf == "<doc>") {
                     documentCache.clear();
+                    sentenceVectorsCache.clear();
                     documentWordCount = 0;
                 } else if (linebuf == "</doc>") {
                     if (documentCache.size() == 0) {
                         continue;
                     }
-                    // document vector
-                    documentVectorCache.setZero();
-                    int documentSize = 0;
-                    for (auto& sentence : documentCache) {
-                        for (int widx : sentence) {
-                            sv4d::Vector& embeddingInVector = embeddingInWeight[widx];
-                            documentVectorCache += embeddingInVector;
-                        }
-                        documentSize += sentence.size();
-                    }
-                    documentVectorCache /= documentSize;
 
-                    for (auto& sentence : documentCache) {
+                    for (int r = 0; r < documentCache.size(); ++r) {
+                        auto& sentence = documentCache[r];
                         int sentenceSize = sentence.size();
-                        subSampledCache.clear();
 
                         // sentence vector
-                        sentenceVectorCache.setZero();
+                        sv4d::Vector sentenceVector = sv4d::Vector(embeddingLayerSize);
                         for (int widx : sentence) {
                             sv4d::Vector& embeddingInVector = embeddingInWeight[widx];
-                            sentenceVectorCache += embeddingInVector;
+                            sentenceVector += embeddingInVector;
+                        }
+                        sentenceVector /= sentenceSize;
+                        sentenceVectorsCache.push_back(sentenceVector);
+                    }
+
+                    for (int r = 0; r < documentCache.size(); ++r) {
+                        auto& sentence = documentCache[r];
+                        int sentenceSize = sentence.size();
+
+                        subSampledCache.clear();
+                        for (int widx : sentence) {
                             subSampledCache.push_back(subsamplingFactorTable[widx] < rand(mt));
                         }
-                        sentenceVectorCache /= sentenceSize;
 
+                        // document vector
+                        documentVectorCache.setZero();
+                        int abcnt = 0;
+                        for (int i = std::max(r - 1, 0); i < std::min(r + 1, (int)documentCache.size()); ++i) {
+                            ++abcnt;
+                            documentVectorCache += sentenceVectorsCache[i];
+                        }
+                        documentVectorCache /= abcnt;
+
+                        // sentence vector
+                        sv4d::Vector& sentenceVectorCache = sentenceVectorsCache[r];
+                        
                         for (int pos = 0; pos < sentenceSize; ++pos) {
                             if (subSampledCache[pos]) {
                                 continue;
