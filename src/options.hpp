@@ -21,6 +21,7 @@ namespace sv4d {
             int dictSample;
             int maxDictPair;
             int threadNum;
+            int batchSize;
 
             float subSamplingFactor;
             float initialLearningRate;
