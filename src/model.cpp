@@ -13,6 +13,7 @@
 #include <random>
 #include <cmath>
 #include <utility>
+#include <deque>
 #include <stdio.h>
 
 namespace sv4d {
@@ -157,8 +158,8 @@ namespace sv4d {
 
         // cache
         int processedWordCount = 0;
-        auto sentencesCache = std::vector<std::vector<int>>();
-        auto sentenceVectorsCache = std::vector<sv4d::Vector>();
+        auto sentencesCache = std::deque<std::vector<int>>();
+        auto sentenceVectorsCache = std::deque<sv4d::Vector>();
 
         auto outputWidxCandidateCache = std::vector<int>();
         outputWidxCandidateCache.reserve(windowSize * 2);
@@ -509,8 +510,8 @@ namespace sv4d {
                     sentenceVectorsCache.clear();
                 } else {
                     for (int i = 0; i < sentenceCount - 2; ++i) {
-                        sentencesCache.erase(sentencesCache.begin() + i);
-                        sentenceVectorsCache.erase(sentenceVectorsCache.begin() + i);
+                        sentencesCache.pop_front();
+                        sentenceVectorsCache.pop_front();
                     }
                 }
 
