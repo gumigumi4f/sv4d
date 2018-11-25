@@ -1,5 +1,6 @@
 import sys
 import subprocess
+import more_itertools
 import numpy as np
 import scipy as sp
 from nltk import tokenize
@@ -34,9 +35,9 @@ def main():
             document = []
             for sentence_element in text_element.findAll("sentence"):
                 sentence = [x.attrs["lemma"].lower() for x in sentence_element.children if x.name is not None and x.attrs["lemma"].lower() in model.synset_vocab]
-                document.extend(sentence)
+                document.append(sentence)
 
-            for sentence_element in text_element.findAll("sentence"):
+            for e, sentence_element in enumerate(text_element.findAll("sentence")):
                 sentence = [(x.attrs["lemma"].lower(), wsd_dataset_pos_tags[x.attrs["pos"]] if x.attrs["pos"] in wsd_dataset_pos_tags else "", x.attrs["id"] if x.name == "instance" else "")
                             for x in sentence_element.children if x.name is not None and x.attrs["lemma"].lower() in model.synset_vocab]
                 
@@ -45,8 +46,9 @@ def main():
                         continue
 
                     contexts = [x[0] for x in sentence[:i]][-5:] + [x[0] for x in sentence[i + 1:]][:5]
-
-                    prob, synsets = model.calculate_sense_probability(word, pos, contexts, [x[0] for x in sentence], document, use_sense_prob=use_sense_prob)
+                    sent = [x[0] for x in sentence]
+                    doc = list(more_itertools.flatten(document[max(0, e - 1):min(len(document), e + 1)]))
+                    prob, synsets = model.calculate_sense_probability(word, pos, contexts, sent, doc, use_sense_prob=use_sense_prob)
 
                     synset = synsets[np.argmax(prob)]
                     synset_keys = [x.key() for x in wn.synset(name=synset).lemmas() if x.name().lower() == word]

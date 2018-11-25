@@ -21,6 +21,7 @@ namespace sv4d {
         dictSample = 3;
         maxDictPair = 10;
         threadNum = 1;
+        batchSize = 256;
 
         subSamplingFactor = 1e-4;
         initialLearningRate = 0.025;

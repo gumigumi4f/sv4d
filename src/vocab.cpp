@@ -220,7 +220,7 @@ namespace sv4d {
 
         lemmaVocabSize = lemmaVocab.size();
         synsetVocabSize = synsetVocab.size();
-        totalWordsNum = std::accumulate(wordFreq.begin(), wordFreq.end(), 0);
+        totalWordsNum = std::accumulate(wordFreq.begin(), wordFreq.end(), 0L);
 
         printf("LemmaVocabSize: %d  SynsetVocabSize: %d  WordVocabSize: %d  TotalWordsNum: %ld  \n", lemmaVocabSize, synsetVocabSize, wordVocabSize, totalWordsNum);
     }
