@@ -13,6 +13,7 @@
 #include <random>
 #include <cmath>
 #include <utility>
+#include <deque>
 #include <stdio.h>
 
 namespace sv4d {
@@ -29,6 +30,7 @@ namespace sv4d {
         dictSample = opt.dictSample;
         maxDictPair = opt.maxDictPair;
         threadNum = opt.threadNum;
+        batchSize = opt.batchSize;
         fileSize = 0;
 
         subSamplingFactor = opt.subSamplingFactor;
@@ -155,13 +157,15 @@ namespace sv4d {
         float betaReward = initialBetaReward;
 
         // cache
-        int documentWordCount = 0;
-        auto documentCache = std::vector<std::vector<int>>();
+        int processedWordCount = 0;
+        auto sentencesCache = std::deque<std::vector<int>>();
+        auto sentenceVectorsCache = std::deque<sv4d::Vector>();
+
         auto outputWidxCandidateCache = std::vector<int>();
         outputWidxCandidateCache.reserve(windowSize * 2);
         auto subSampledCache = std::vector<bool>();
         subSampledCache.reserve(4096);
-        auto sentenceVectorsCache = std::vector<sv4d::Vector>();
+
         sv4d::Vector documentVectorCache = sv4d::Vector(embeddingLayerSize);
         sv4d::Vector contextVectorCache = sv4d::Vector(embeddingLayerSize);
         sv4d::Vector featureVectorCache = sv4d::Vector(embeddingLayerSize * 3);
@@ -169,259 +173,185 @@ namespace sv4d {
         for (int iter = 0; iter < epochs; ++iter) {
             fin.clear();
             fin.seekg(fileSize / threadNum * threadId, fin.beg);
-            // seek to head of document
-            while (true) {
-                std::getline(fin, linebuf);
-                if (sv4d::utils::string::trim(linebuf) == "<doc>") {
-                    documentCache.clear();
-                    sentenceVectorsCache.clear();
-                    documentWordCount = 0;
-                    break;
-                }
-            }
+            // seek to head of sentence
+            std::getline(fin, linebuf);
+
+            sentencesCache.clear();
+            sentenceVectorsCache.clear();
 
             // generate batch and process
-            while (std::getline(fin, linebuf)) {
-                linebuf = sv4d::utils::string::trim(linebuf);
-                if (linebuf == "<doc>") {
-                    documentCache.clear();
-                    sentenceVectorsCache.clear();
-                    documentWordCount = 0;
-                } else if (linebuf == "</doc>") {
-                    if (documentCache.size() == 0) {
+            while (true) {
+                if (fin.tellg() > fileSize / threadNum * (threadId + 1)) {
+                    break;
+                }
+
+                // clear cache
+                processedWordCount = 0;
+
+                // cache sentence for faster calculation
+                bool bod = false; // begin of document
+                bool eod = false; // end of document
+                while (std::getline(fin, linebuf)) {
+                    linebuf = sv4d::utils::string::trim(linebuf);
+                    if (linebuf == "<doc>") {
+                        bod = true;
                         continue;
-                    }
-
-                    for (int r = 0; r < documentCache.size(); ++r) {
-                        auto& sentence = documentCache[r];
-                        int sentenceSize = sentence.size();
-
-                        // sentence vector
-                        sv4d::Vector sentenceVector = sv4d::Vector(embeddingLayerSize);
-                        for (int widx : sentence) {
-                            sv4d::Vector& embeddingInVector = embeddingInWeight[widx];
-                            sentenceVector += embeddingInVector;
-                        }
-                        sentenceVector /= sentenceSize;
-                        sentenceVectorsCache.push_back(sentenceVector);
-                    }
-
-                    for (int r = 0; r < documentCache.size(); ++r) {
-                        auto& sentence = documentCache[r];
-                        int sentenceSize = sentence.size();
-
-                        subSampledCache.clear();
-                        for (int widx : sentence) {
-                            subSampledCache.push_back(subsamplingFactorTable[widx] < rand(mt));
-                        }
-
-                        // document vector
-                        documentVectorCache.setZero();
-                        int abcnt = 0;
-                        for (int i = std::max(r - 1, 0); i < std::min(r + 1, (int)documentCache.size()); ++i) {
-                            ++abcnt;
-                            documentVectorCache += sentenceVectorsCache[i];
-                        }
-                        documentVectorCache /= abcnt;
-
-                        // sentence vector
-                        sv4d::Vector& sentenceVectorCache = sentenceVectorsCache[r];
-                        
-                        for (int pos = 0; pos < sentenceSize; ++pos) {
-                            if (subSampledCache[pos]) {
+                    } else if (linebuf == "") {
+                        continue;
+                    } else if (linebuf == "</doc>") {
+                        eod = true;
+                        break;
+                    } else {
+                        auto sentence = std::vector<int>();
+                        for (auto word : sv4d::utils::string::split(linebuf, ' ')) {
+                            if (vocab.synsetVocab.find(word) == vocab.synsetVocab.end()) {
                                 continue;
                             }
-
-                            // output widx
-                            outputWidxCandidateCache.clear();
-                            int reducedWindowSize = windowSize - rndwindow(mt);
-                            for (int pos2 = pos - 1, count = reducedWindowSize; pos2 >= 0 && count != 0; --pos2) {
-                                if (subSampledCache[pos2]) {
-                                    continue;
-                                }
-                                outputWidxCandidateCache.push_back(sentence[pos2]);
-                                count -= 1;
-                            }
-                            for (int pos2 = pos + 1, count = reducedWindowSize; pos2 < sentenceSize && count != 0; ++pos2) {
-                                if (subSampledCache[pos2]) {
-                                    continue;
-                                }
-                                outputWidxCandidateCache.push_back(sentence[pos2]);
-                                count -= 1;
-                            }
-                            if (outputWidxCandidateCache.size() == 0) {
+                            int widx = vocab.synsetVocab[word];
+                            if (vocab.wordFreq[widx] == 0) {
                                 continue;
                             }
-                            int outputWidx = outputWidxCandidateCache[mt() % outputWidxCandidateCache.size()];
+                            sentence.push_back(widx);
+                        }
+                        processedWordCount += sentence.size();
+                        if (sentence.size() >= 5) {
+                            sentencesCache.push_back(sentence);
 
-                            // context vector
-                            contextVectorCache.setZero();
-                            int minPos = pos - windowSize < 0 ? 0 : pos - windowSize;
-                            int maxPos = pos + windowSize >= sentenceSize ? sentenceSize - 1 : pos + windowSize;
-                            for (int pos2 = minPos; pos2 <= maxPos; ++pos2) {
-                                if (pos == pos2) {
-                                    continue;
-                                }
-                                sv4d::Vector& embeddingInVector = embeddingInWeight[sentence[pos2]];
-                                contextVectorCache += embeddingInVector;
+                            sv4d::Vector sentenceVector = sv4d::Vector(embeddingLayerSize);
+                            for (int widx : sentence) {
+                                sv4d::Vector& embeddingInVector = embeddingInWeight[widx];
+                                sentenceVector += embeddingInVector;
                             }
-                            contextVectorCache /= (maxPos - minPos - 1);
+                            sentenceVector /= (int)sentence.size();
+                            sentenceVectorsCache.push_back(sentenceVector);
+                        }
+                        if (sentencesCache.size() > batchSize) {
+                            break;
+                        }
+                        if (fin.tellg() > fileSize / threadNum * (threadId + 1)) {
+                            break;
+                        }
+                    }
+                }
 
-                            // input widx
-                            int inputWidx = sentence[pos];
+                int sentenceCount = sentencesCache.size();
+                if (sentenceCount == 0) {
+                    continue;
+                }
 
-                            // feature vector
-                            for (int i = 0; i < embeddingLayerSize; ++i) {
-                                featureVectorCache[i] = contextVectorCache[i];
-                                featureVectorCache[i + embeddingLayerSize] = sentenceVectorCache[i];
-                                featureVectorCache[i + embeddingLayerSize * 2] = documentVectorCache[i];
+                int targetSentenceCount = sentenceCount - (!eod);
+                // process batch
+                for (int r = 0 + (!bod); r < targetSentenceCount; ++r) {
+                    auto& sentence = sentencesCache[r];
+                    int sentenceSize = sentence.size();
+
+                    subSampledCache.clear();
+                    for (int widx : sentence) {
+                        subSampledCache.push_back(subsamplingFactorTable[widx] < rand(mt));
+                    }
+
+                    // document vector
+                    documentVectorCache.setZero();
+                    int minSentPos = r - 1 < 0 ? 0 : r - 1;
+                    int maxSentPos = r + 1 > sentenceCount ? sentenceCount : r + 1;
+                    for (int i = minSentPos; i < maxSentPos; ++i) {
+                        documentVectorCache += sentenceVectorsCache[i];
+                    }
+                    documentVectorCache /= (maxSentPos - minSentPos);
+
+                    // sentence vector
+                    sv4d::Vector& sentenceVectorCache = sentenceVectorsCache[r];
+
+                    for (int pos = 0; pos < sentenceSize; ++pos) {
+                        if (subSampledCache[pos]) {
+                            continue;
+                        }
+
+                        // output widx
+                        outputWidxCandidateCache.clear();
+                        int reducedWindowSize = windowSize - rndwindow(mt);
+                        for (int pos2 = pos - 1, count = reducedWindowSize; pos2 >= 0 && count != 0; --pos2) {
+                            if (subSampledCache[pos2]) {
+                                continue;
                             }
+                            outputWidxCandidateCache.push_back(sentence[pos2]);
+                            count -= 1;
+                        }
+                        for (int pos2 = pos + 1, count = reducedWindowSize; pos2 < sentenceSize && count != 0; ++pos2) {
+                            if (subSampledCache[pos2]) {
+                                continue;
+                            }
+                            outputWidxCandidateCache.push_back(sentence[pos2]);
+                            count -= 1;
+                        }
+                        if (outputWidxCandidateCache.size() == 0) {
+                            continue;
+                        }
+                        int outputWidx = outputWidxCandidateCache[mt() % outputWidxCandidateCache.size()];
 
-                            // training
-                            // % means dot operation
-                            {
-                                sv4d::Vector embeddingInBufVector = sv4d::Vector(embeddingLayerSize);
-                                sv4d::Vector embeddingOutBufVector = sv4d::Vector(embeddingLayerSize);
+                        // context vector
+                        contextVectorCache.setZero();
+                        int minPos = pos - windowSize < 0 ? 0 : pos - windowSize;
+                        int maxPos = pos + windowSize >= sentenceSize ? sentenceSize - 1 : pos + windowSize;
+                        for (int pos2 = minPos; pos2 <= maxPos; ++pos2) {
+                            if (pos == pos2) {
+                                continue;
+                            }
+                            sv4d::Vector& embeddingInVector = embeddingInWeight[sentence[pos2]];
+                            contextVectorCache += embeddingInVector;
+                        }
+                        contextVectorCache /= (maxPos - minPos - 1);
 
-                                sv4d::SynsetData& synsetData = vocab.widx2lidxs[inputWidx];
+                        // input widx
+                        int inputWidx = sentence[pos];
 
-                                sv4d::Vector& vWordOut = embeddingOutWeight[outputWidx];
-                                sv4d::Vector& vWordOutIn = embeddingInWeight[outputWidx];
+                        // feature vector
+                        for (int i = 0; i < embeddingLayerSize; ++i) {
+                            featureVectorCache[i] = contextVectorCache[i];
+                            featureVectorCache[i + embeddingLayerSize] = sentenceVectorCache[i];
+                            featureVectorCache[i + embeddingLayerSize * 2] = documentVectorCache[i];
+                        }
 
-                                // sense training
-                                if (synsetData.validPos.size() != 0) {
-                                    // pos selection (random)
-                                    int targetPos = synsetData.validPos[mt() % synsetData.validPos.size()];
-                                    auto& synsetLemmaIndices = synsetData.synsetLemmaIndices[targetPos];
+                        // training
+                        // % means dot operation
+                        {
+                            sv4d::Vector embeddingInBufVector = sv4d::Vector(embeddingLayerSize);
+                            sv4d::Vector embeddingOutBufVector = sv4d::Vector(embeddingLayerSize);
 
-                                    // sense selection
-                                    int senseNum = synsetLemmaIndices.size();
-                                    sv4d::Vector senseSelectionLogits = sv4d::Vector(senseNum);
-                                    for (int i = 0; i < senseNum; ++i) {
-                                        int lidx = synsetLemmaIndices[i];
-                                        senseSelectionLogits[i] = (featureVectorCache % senseSelectionOutWeight[lidx]) + senseSelectionOutBias[lidx];
-                                    }
-                                    sv4d::Vector senseSelectionProb = senseSelectionLogits.softmax(temperature);
+                            sv4d::SynsetData& synsetData = vocab.widx2lidxs[inputWidx];
 
-                                    sv4d::Vector rewardLogits = sv4d::Vector(senseNum);
+                            sv4d::Vector& vWordOut = embeddingOutWeight[outputWidx];
+                            sv4d::Vector& vWordOutIn = embeddingInWeight[outputWidx];
 
-                                    // embedding
-                                    for (int i = 0; i < senseNum; ++i) {
-                                        embeddingInBufVector.setZero();
+                            // sense training
+                            if (synsetData.validPos.size() != 0) {
+                                // pos selection (random)
+                                int targetPos = synsetData.validPos[mt() % synsetData.validPos.size()];
+                                auto& synsetLemmaIndices = synsetData.synsetLemmaIndices[targetPos];
 
-                                        float senseWeight = senseSelectionProb[i];
-
-                                        int sidx = vocab.lidx2sidx[synsetLemmaIndices[i]];
-                                        sv4d::SynsetDictPair& synsetDictPair = vocab.synsetDictPair[sidx];
-                                        auto& dictPair = synsetDictPair.dictPair;
-
-                                        sv4d::Vector& vSynsetIn = embeddingInWeight[sidx];
-
-                                        // Positive: example predicts label.
-                                        //   forward: x = v_in' * v_out
-                                        //            l = log(sigmoid(x))
-                                        //   backward: dl/dx = g = sigmoid(-x)
-                                        //             dl/d(v_in) = g * v_out'
-                                        //             dl/d(v_out) = v_in' * g
-                                        {
-                                            float dot = vSynsetIn % vWordOut;
-                                            rewardLogits[i] += dot;
-                                            float g = sv4d::utils::operation::sigmoid(-dot);
-                                            float w = g * lr * senseWeight;
-                                            // embeddingInBufVector += vWordOut * w;
-                                            // embeddingOutBufVector += vSynsetIn * w;
-                                            embeddingInBufVector.fusedMultiplyAdd(vWordOut, w);
-                                            embeddingOutBufVector.fusedMultiplyAdd(vSynsetIn, w);
-                                        }
-
-                                        // Negative samples:
-                                        //   forward: x = v_in' * v_sample
-                                        //            l = log(sigmoid(-x))
-                                        //   backward: dl/dx = g = -sigmoid(x)
-                                        //             dl/d(v_in) = g * v_out'
-                                        //             dl/d(v_out) = v_in' * g
-                                        for (int j = 0; j < negativeSample; ++j) {
-                                            int sample = unigramTable[--negativePos];
-                                            if (negativePos == 0) {
-                                                negativePos = UnigramTableSize;
-                                            }
-                                            if (sample == outputWidx) {
-                                                continue;
-                                            }
-                                            if (std::find(dictPair.begin(), dictPair.end(), sample) != dictPair.end()) {
-                                                continue;
-                                            } 
-                                            sv4d::Vector& vSample = embeddingOutWeight[sample];
-                                            float dot = vSynsetIn % vSample;
-                                            float g = -sv4d::utils::operation::sigmoid(dot);
-                                            float w = g * lr * senseWeight;
-                                            // embeddingInBufVector += vSample * w;
-                                            // vSample += vSynsetIn * w;
-                                            embeddingInBufVector.fusedMultiplyAdd(vSample, w);
-                                            vSample.fusedMultiplyAdd(vSynsetIn, w);
-                                        }
-
-                                        // Positive: dictionary pairs for accurate prediction
-                                        //   forward: x = v_in' * v_out
-                                        //            l = log(sigmoid(x))
-                                        //   backward: dl/dx = g = sigmoid(-x)
-                                        //             dl/d(v_in) = g * v_out'
-                                        //             dl/d(v_out) = v_in' * g
-                                        for (int j = 0; j < dictSample; ++j) {
-                                            if (dictPair.size() == 0) {
-                                                break;
-                                            }
-                                            int sample = dictPair[synsetDictPair.dpos];
-                                            if (synsetDictPair.dpos == dictPair.size() - 1) {
-                                                synsetDictPair.dpos = 0;
-                                            } else {
-                                                synsetDictPair.dpos += 1;
-                                            }
-                                            sv4d::Vector& vSample = embeddingOutWeight[sample];
-                                            rewardLogits[i] += (vWordOutIn % vSample) * betaReward;
-                                            float dot = vSynsetIn % vSample;
-                                            float g = sv4d::utils::operation::sigmoid(-dot);
-                                            float w = g * lr * senseWeight * betaDict;
-                                            // embeddingInBufVector += vSample * w;
-                                            // vSample += vSynsetIn * w;
-                                            embeddingInBufVector.fusedMultiplyAdd(vSample, w);
-                                            vSample.fusedMultiplyAdd(vSynsetIn, w);
-                                        }
-
-                                        vSynsetIn += embeddingInBufVector;
-                                    }
-
-                                    // sense selection (update)
-                                    sv4d::Vector rewardProb = rewardLogits.softmax(1.0);
-
-                                    // Update sense selection weight.
-                                    //   forward: x = v_feature' * v_sense_selection + v_sense_bias
-                                    //            l = z * log(sigmoid(x)) + (1 - z) * log(sigmoid(-x))
-                                    //   backward: dl/dx = g = z * sigmoid(-x) + (1 - z) * -sigmoid(x)
-                                    //             dl/d(v_sense_selection) = v_feature' * g
-                                    //             dl/d(v_sense_bias) = g
-                                    for (int i = 0; i < senseNum; ++i) {
-                                        int lidx = synsetLemmaIndices[i];
-                                        float prob = sv4d::utils::operation::sigmoid(senseSelectionLogits[i]);
-                                        float g = rewardProb[i] * (1.0f - prob) - (1.0f - rewardProb[i]) * prob;
-                                        sv4d::Vector& vSenseSelection = senseSelectionOutWeight[lidx];
-                                        float& bSenseSelection = senseSelectionOutBias[lidx];
-                                        float w = g * lr;
-                                        // vSenseSelection += featureVectorCache * w;
-                                        // bSenseSelection += w;
-                                        vSenseSelection.fusedMultiplyAdd(featureVectorCache, w);
-                                        bSenseSelection += w;
-                                    }
+                                // sense selection
+                                int senseNum = synsetLemmaIndices.size();
+                                sv4d::Vector senseSelectionLogits = sv4d::Vector(senseNum);
+                                for (int i = 0; i < senseNum; ++i) {
+                                    int lidx = synsetLemmaIndices[i];
+                                    senseSelectionLogits[i] = (featureVectorCache % senseSelectionOutWeight[lidx]) + senseSelectionOutBias[lidx];
                                 }
+                                sv4d::Vector senseSelectionProb = senseSelectionLogits.softmax(temperature);
 
-                                // word training
-                                {
+                                sv4d::Vector rewardLogits = sv4d::Vector(senseNum);
+
+                                // embedding
+                                for (int i = 0; i < senseNum; ++i) {
                                     embeddingInBufVector.setZero();
 
-                                    int wsidx = vocab.lidx2sidx[synsetData.wordLemmaIndex];
+                                    float senseWeight = senseSelectionProb[i];
 
-                                    sv4d::Vector& vWordIn = embeddingInWeight[wsidx];
-                                    
+                                    int sidx = vocab.lidx2sidx[synsetLemmaIndices[i]];
+                                    sv4d::SynsetDictPair& synsetDictPair = vocab.synsetDictPair[sidx];
+                                    auto& dictPair = synsetDictPair.dictPair;
+
+                                    sv4d::Vector& vSynsetIn = embeddingInWeight[sidx];
+
                                     // Positive: example predicts label.
                                     //   forward: x = v_in' * v_out
                                     //            l = log(sigmoid(x))
@@ -429,13 +359,14 @@ namespace sv4d {
                                     //             dl/d(v_in) = g * v_out'
                                     //             dl/d(v_out) = v_in' * g
                                     {
-                                        float dot = vWordIn % vWordOut;
+                                        float dot = vSynsetIn % vWordOut;
+                                        rewardLogits[i] += dot;
                                         float g = sv4d::utils::operation::sigmoid(-dot);
-                                        float w = g * lr;
+                                        float w = g * lr * senseWeight;
                                         // embeddingInBufVector += vWordOut * w;
-                                        // embeddingOutBufVector += vWordIn * w;
+                                        // embeddingOutBufVector += vSynsetIn * w;
                                         embeddingInBufVector.fusedMultiplyAdd(vWordOut, w);
-                                        embeddingOutBufVector.fusedMultiplyAdd(vWordIn, w);
+                                        embeddingOutBufVector.fusedMultiplyAdd(vSynsetIn, w);
                                     }
 
                                     // Negative samples:
@@ -452,73 +383,160 @@ namespace sv4d {
                                         if (sample == outputWidx) {
                                             continue;
                                         }
+                                        if (std::find(dictPair.begin(), dictPair.end(), sample) != dictPair.end()) {
+                                            continue;
+                                        } 
                                         sv4d::Vector& vSample = embeddingOutWeight[sample];
-                                        float dot = vWordIn % vSample;
+                                        float dot = vSynsetIn % vSample;
                                         float g = -sv4d::utils::operation::sigmoid(dot);
-                                        float w = g * lr;
+                                        float w = g * lr * senseWeight;
                                         // embeddingInBufVector += vSample * w;
-                                        // vSample += vWordIn * w;
+                                        // vSample += vSynsetIn * w;
                                         embeddingInBufVector.fusedMultiplyAdd(vSample, w);
-                                        vSample.fusedMultiplyAdd(vWordIn, w);
+                                        vSample.fusedMultiplyAdd(vSynsetIn, w);
                                     }
 
-                                    vWordIn += embeddingInBufVector;
+                                    // Positive: dictionary pairs for accurate prediction
+                                    //   forward: x = v_in' * v_out
+                                    //            l = log(sigmoid(x))
+                                    //   backward: dl/dx = g = sigmoid(-x)
+                                    //             dl/d(v_in) = g * v_out'
+                                    //             dl/d(v_out) = v_in' * g
+                                    for (int j = 0; j < dictSample; ++j) {
+                                        if (dictPair.size() == 0) {
+                                            break;
+                                        }
+                                        int sample = dictPair[synsetDictPair.dpos];
+                                        if (synsetDictPair.dpos == dictPair.size() - 1) {
+                                            synsetDictPair.dpos = 0;
+                                        } else {
+                                            synsetDictPair.dpos += 1;
+                                        }
+                                        sv4d::Vector& vSample = embeddingOutWeight[sample];
+                                        rewardLogits[i] += (vWordOutIn % vSample) * betaReward;
+                                        float dot = vSynsetIn % vSample;
+                                        float g = sv4d::utils::operation::sigmoid(-dot);
+                                        float w = g * lr * senseWeight * betaDict;
+                                        // embeddingInBufVector += vSample * w;
+                                        // vSample += vSynsetIn * w;
+                                        embeddingInBufVector.fusedMultiplyAdd(vSample, w);
+                                        vSample.fusedMultiplyAdd(vSynsetIn, w);
+                                    }
+
+                                    vSynsetIn += embeddingInBufVector;
                                 }
 
-                                vWordOut += embeddingOutBufVector;
+                                // sense selection (update)
+                                sv4d::Vector rewardProb = rewardLogits.softmax(1.0);
+
+                                // Update sense selection weight.
+                                //   forward: x = v_feature' * v_sense_selection + v_sense_bias
+                                //            l = z * log(sigmoid(x)) + (1 - z) * log(sigmoid(-x))
+                                //   backward: dl/dx = g = z * sigmoid(-x) + (1 - z) * -sigmoid(x)
+                                //             dl/d(v_sense_selection) = v_feature' * g
+                                //             dl/d(v_sense_bias) = g
+                                for (int i = 0; i < senseNum; ++i) {
+                                    int lidx = synsetLemmaIndices[i];
+                                    float prob = sv4d::utils::operation::sigmoid(senseSelectionLogits[i]);
+                                    float g = rewardProb[i] * (1.0f - prob) - (1.0f - rewardProb[i]) * prob;
+                                    sv4d::Vector& vSenseSelection = senseSelectionOutWeight[lidx];
+                                    float& bSenseSelection = senseSelectionOutBias[lidx];
+                                    float w = g * lr;
+                                    // vSenseSelection += featureVectorCache * w;
+                                    // bSenseSelection += w;
+                                    vSenseSelection.fusedMultiplyAdd(featureVectorCache, w);
+                                    bSenseSelection += w;
+                                }
                             }
+
+                            // word training
+                            {
+                                embeddingInBufVector.setZero();
+
+                                int wsidx = vocab.lidx2sidx[synsetData.wordLemmaIndex];
+
+                                sv4d::Vector& vWordIn = embeddingInWeight[wsidx];
+                                
+                                // Positive: example predicts label.
+                                //   forward: x = v_in' * v_out
+                                //            l = log(sigmoid(x))
+                                //   backward: dl/dx = g = sigmoid(-x)
+                                //             dl/d(v_in) = g * v_out'
+                                //             dl/d(v_out) = v_in' * g
+                                {
+                                    float dot = vWordIn % vWordOut;
+                                    float g = sv4d::utils::operation::sigmoid(-dot);
+                                    float w = g * lr;
+                                    // embeddingInBufVector += vWordOut * w;
+                                    // embeddingOutBufVector += vWordIn * w;
+                                    embeddingInBufVector.fusedMultiplyAdd(vWordOut, w);
+                                    embeddingOutBufVector.fusedMultiplyAdd(vWordIn, w);
+                                }
+
+                                // Negative samples:
+                                //   forward: x = v_in' * v_sample
+                                //            l = log(sigmoid(-x))
+                                //   backward: dl/dx = g = -sigmoid(x)
+                                //             dl/d(v_in) = g * v_out'
+                                //             dl/d(v_out) = v_in' * g
+                                for (int j = 0; j < negativeSample; ++j) {
+                                    int sample = unigramTable[--negativePos];
+                                    if (negativePos == 0) {
+                                        negativePos = UnigramTableSize;
+                                    }
+                                    if (sample == outputWidx) {
+                                        continue;
+                                    }
+                                    sv4d::Vector& vSample = embeddingOutWeight[sample];
+                                    float dot = vWordIn % vSample;
+                                    float g = -sv4d::utils::operation::sigmoid(dot);
+                                    float w = g * lr;
+                                    // embeddingInBufVector += vSample * w;
+                                    // vSample += vWordIn * w;
+                                    embeddingInBufVector.fusedMultiplyAdd(vSample, w);
+                                    vSample.fusedMultiplyAdd(vWordIn, w);
+                                }
+
+                                vWordIn += embeddingInBufVector;
+                            }
+
+                            vWordOut += embeddingOutBufVector;
                         }
-
-                        documentWordCount += sentenceSize;
                     }
-
-                    trainedWordCount += documentWordCount;
-
-                    if (fin.tellg() > fileSize / threadNum * (threadId + 1)) {
-                        break;
-                    }
-
-                    float progress = trainedWordCount / (float)(epochs * vocab.totalWordsNum + 1);
-                    lr = (initialLearningRate - minLearningRate) * (1.0f - progress) + minLearningRate;
-                    if (progress <= 0.5) {
-                        temperature = (initialTemperature - minTemperature) * (1.0f - progress * 2) + minTemperature;
-                        betaDict = (initialBetaDict - minBetaDict) * (1.0f - progress * 2) + minBetaDict;
-                        betaReward = (initialBetaReward - minBetaReward) * (1.0f - progress * 2) + minBetaReward;
-                    } else {
-                        temperature = minTemperature;
-                        betaDict = minBetaDict;
-                        betaReward = minBetaReward;
-                    }
-
-                    // print log
-                    auto now = std::chrono::system_clock::now();
-                    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
-                    float speed = trainedWordCount / (float)((elapsed + 1) * threadNum);
-                    float eta = ((float)(epochs * vocab.totalWordsNum) / (trainedWordCount + 1) * elapsed - elapsed) / 60000.0f;
-                    printf("%cAlpha: %f  Progress: %.2f%%  Words/thread/sec: %.2fk  Remaining: %.2fm  ", 13, lr, progress * 100.0f, speed, eta);
-                    fflush(stdout);
-                } else if (linebuf == "") {
-                    continue;
-                } else {
-                    auto widxes = std::vector<int>();
-                    auto sentence = sv4d::utils::string::split(linebuf, ' ');
-                    for (auto word : sentence) {
-                        if (vocab.synsetVocab.find(word) == vocab.synsetVocab.end()) {
-                            continue;
-                        }
-                        int widx = vocab.synsetVocab[word];
-                        if (vocab.wordFreq[widx] == 0) {
-                            continue;
-                        }
-                        widxes.push_back(widx);
-                    }
-
-                    if (widxes.size() < 5) {
-                        documentWordCount += widxes.size();
-                        continue;
-                    }
-                    documentCache.push_back(widxes);
                 }
+
+                if (eod) {
+                    sentencesCache.clear();
+                    sentenceVectorsCache.clear();
+                } else {
+                    for (int i = 0; i < sentenceCount - 2; ++i) {
+                        sentencesCache.pop_front();
+                        sentenceVectorsCache.pop_front();
+                    }
+                }
+
+                trainedWordCount += processedWordCount;
+
+                // change hyper parameter
+                float progress = trainedWordCount / (float)(epochs * vocab.totalWordsNum + 1);
+                lr = (initialLearningRate - minLearningRate) * (1.0f - progress) + minLearningRate;
+                if (progress <= 0.5) {
+                    temperature = (initialTemperature - minTemperature) * (1.0f - progress * 2) + minTemperature;
+                    betaDict = (initialBetaDict - minBetaDict) * (1.0f - progress * 2) + minBetaDict;
+                    betaReward = (initialBetaReward - minBetaReward) * (1.0f - progress * 2) + minBetaReward;
+                } else {
+                    temperature = minTemperature;
+                    betaDict = minBetaDict;
+                    betaReward = minBetaReward;
+                }
+
+                // print log
+                auto now = std::chrono::system_clock::now();
+                auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
+                float speed = trainedWordCount / (float)((elapsed + 1) * threadNum);
+                float eta = ((float)(epochs * vocab.totalWordsNum) / (trainedWordCount + 1) * elapsed - elapsed) / 60000.0f;
+                printf("%cAlpha: %f  Progress: %.2f%%  Words/thread/sec: %.2fk  Remaining: %.2fm  ", 13, lr, progress * 100.0f, speed, eta);
+                fflush(stdout);
             }
         }
     }
