@@ -23,10 +23,9 @@ namespace sv4d {
     };
 
     struct SynsetDictPair {
-        SynsetDictPair() : dictPair(), dpos(0) {};
+        SynsetDictPair() : dictPair() {};
 
         std::vector<int> dictPair;
-        int dpos;
     };
 
     class Vocab {

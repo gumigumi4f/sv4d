@@ -19,7 +19,7 @@ namespace sv4d {
         windowSize = 5;
         negativeSample = 5;
         dictSample = 3;
-        maxDictPair = 10;
+        maxDictPair = 15;
         threadNum = 1;
         batchSize = 256;
 

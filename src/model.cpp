@@ -165,6 +165,7 @@ namespace sv4d {
         outputWidxCandidateCache.reserve(windowSize * 2);
         auto subSampledCache = std::vector<bool>();
         subSampledCache.reserve(4096);
+        auto dictPairPos = std::unordered_map<int, int>();
 
         sv4d::Vector documentVectorCache = sv4d::Vector(embeddingLayerSize);
         sv4d::Vector contextVectorCache = sv4d::Vector(embeddingLayerSize);
@@ -287,7 +288,6 @@ namespace sv4d {
                         if (outputWidxCandidateCache.size() == 0) {
                             continue;
                         }
-                        int outputWidx = outputWidxCandidateCache[mt() % outputWidxCandidateCache.size()];
 
                         // context vector
                         contextVectorCache.setZero();
@@ -314,7 +314,7 @@ namespace sv4d {
 
                         // training
                         // % means dot operation
-                        {
+                        for (int outputWidx: outputWidxCandidateCache) {
                             sv4d::Vector embeddingInBufVector = sv4d::Vector(embeddingLayerSize);
                             sv4d::Vector embeddingOutBufVector = sv4d::Vector(embeddingLayerSize);
 
@@ -336,7 +336,7 @@ namespace sv4d {
                                     int lidx = synsetLemmaIndices[i];
                                     senseSelectionLogits[i] = (featureVectorCache % senseSelectionOutWeight[lidx]) + senseSelectionOutBias[lidx];
                                 }
-                                sv4d::Vector senseSelectionProb = senseSelectionLogits.softmax(temperature);
+                                sv4d::Vector senseSelectionProbTemperature = senseSelectionLogits.softmax(temperature);
 
                                 sv4d::Vector rewardLogits = sv4d::Vector(senseNum);
 
@@ -344,7 +344,7 @@ namespace sv4d {
                                 for (int i = 0; i < senseNum; ++i) {
                                     embeddingInBufVector.setZero();
 
-                                    float senseWeight = senseSelectionProb[i];
+                                    float senseWeight = senseSelectionProbTemperature[i];
 
                                     int sidx = vocab.lidx2sidx[synsetLemmaIndices[i]];
                                     sv4d::SynsetDictPair& synsetDictPair = vocab.synsetDictPair[sidx];
@@ -406,11 +406,12 @@ namespace sv4d {
                                         if (dictPair.size() == 0) {
                                             break;
                                         }
-                                        int sample = dictPair[synsetDictPair.dpos];
-                                        if (synsetDictPair.dpos == dictPair.size() - 1) {
-                                            synsetDictPair.dpos = 0;
+                                        int& dpos = dictPairPos[sidx];
+                                        int sample = dictPair[dpos];
+                                        if (dpos == dictPair.size() - 1) {
+                                            dpos = 0;
                                         } else {
-                                            synsetDictPair.dpos += 1;
+                                            dpos += 1;
                                         }
                                         sv4d::Vector& vSample = embeddingOutWeight[sample];
                                         rewardLogits[i] += (vWordOutIn % vSample) * betaReward;
@@ -428,17 +429,17 @@ namespace sv4d {
 
                                 // sense selection (update)
                                 sv4d::Vector rewardProb = rewardLogits.softmax(1.0);
+                                sv4d::Vector senseSelectionProb = senseSelectionLogits.softmax(1.0);
 
                                 // Update sense selection weight.
                                 //   forward: x = v_feature' * v_sense_selection + v_sense_bias
-                                //            l = z * log(sigmoid(x)) + (1 - z) * log(sigmoid(-x))
-                                //   backward: dl/dx = g = z * sigmoid(-x) + (1 - z) * -sigmoid(x)
+                                //            l = Σz * log(softmax(x))
+                                //   backward: dl/dx = g = z * (1 - x) - Σz * x
                                 //             dl/d(v_sense_selection) = v_feature' * g
                                 //             dl/d(v_sense_bias) = g
                                 for (int i = 0; i < senseNum; ++i) {
                                     int lidx = synsetLemmaIndices[i];
-                                    float prob = sv4d::utils::operation::sigmoid(senseSelectionLogits[i]);
-                                    float g = rewardProb[i] * (1.0f - prob) - (1.0f - rewardProb[i]) * prob;
+                                    float g = rewardProb[i] - senseSelectionProb[i];
                                     sv4d::Vector& vSenseSelection = senseSelectionOutWeight[lidx];
                                     float& bSenseSelection = senseSelectionOutBias[lidx];
                                     float w = g * lr;
