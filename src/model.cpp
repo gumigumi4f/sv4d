@@ -98,7 +98,7 @@ namespace sv4d {
         for (int a = 0; a < UnigramTableSize; ++a) {
             unigramTable[a] = i;
             if (a / (double)UnigramTableSize > d1) {
-                i++;
+                ++i;
                 d1 += std::pow(vocab.wordFreq[i], power) / trainWordsPow;
             }
 
