@@ -64,9 +64,9 @@ namespace sv4d {
     void Model::training() {
         startTime = std::chrono::system_clock::now();
         trainedWordCount = 0;
-        auto threads = std::vector<std::thread>();
         printf("Training model:  \n");
         if (threadNum > 1) {
+            auto threads = std::vector<std::thread>();
             for (int i = 0; i < threadNum; i++) {
                 threads.push_back(std::thread(&Model::trainingThread, this, i));
             }
@@ -288,6 +288,7 @@ namespace sv4d {
                         if (outputWidxCandidateCache.size() == 0) {
                             continue;
                         }
+                        int outputWidx = outputWidxCandidateCache[mt() % outputWidxCandidateCache.size()];
 
                         // context vector
                         contextVectorCache.setZero();
@@ -314,7 +315,7 @@ namespace sv4d {
 
                         // training
                         // % means dot operation
-                        for (int outputWidx: outputWidxCandidateCache) {
+                        {
                             sv4d::Vector embeddingInBufVector = sv4d::Vector(embeddingLayerSize);
                             sv4d::Vector embeddingOutBufVector = sv4d::Vector(embeddingLayerSize);
 
