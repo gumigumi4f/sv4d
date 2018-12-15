@@ -12,6 +12,7 @@ namespace sv4d {
             std::string modelDir;
             std::string synsetDataFile;
             std::string trainingCorpus;
+            std::string stopWordsFile;
 
             int epochs;
             int embeddingLayerSize;

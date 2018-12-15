@@ -46,7 +46,7 @@ def extract_feature(document_str, model):
 def main():
     use_sense_prob = False
     if len(sys.argv) >= 4:
-        use_sense_prob = bool(sys.argv[3])
+        use_sense_prob = bool(int(sys.argv[5]))
 
     model = Model(sys.argv[1])
     print("Loading vocab...")

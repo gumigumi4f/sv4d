@@ -110,6 +110,7 @@ def get_synsets_pair(word, synsets, stwords, vocab):
         gloss_data[synset.name()] = {}
 
         gloss_words = synset_gloss[synset.name()]
+        example_words = []
         for gloss_word in gloss_words:
             if gloss_word not in gloss_data[synset.name()]:
                 gloss_data[synset.name()][gloss_word] = {
@@ -121,14 +122,6 @@ def get_synsets_pair(word, synsets, stwords, vocab):
 
         if use_example:
             example_words = synset_example[synset.name()]
-            for example_word in example_words:
-                if example_word not in gloss_data[synset.name()]:
-                    gloss_data[synset.name()][example_word] = {
-                        "freq": 1,
-                        "graph_distance": 1,
-                    }
-                else:
-                    gloss_data[synset.name()][example_word]["freq"] += 1
 
         related_synsets = synset.also_sees() \
                           + synset.attributes() \
@@ -163,11 +156,22 @@ def get_synsets_pair(word, synsets, stwords, vocab):
             unique_related_synsets.append(related_synset)
 
         expanded_gloss_words = []
+        expanded_sy_words = []
         expanded_example_words = []
         for related_synset in unique_related_synsets:
             expanded_gloss_words += synset_gloss[related_synset.name()]
+            expanded_sy_words += [x.name() for x in related_synset.lemmas()]
             if use_example:
                 expanded_example_words += synset_example[related_synset.name()]
+        
+        for gloss_word in expanded_sy_words:
+            if gloss_word not in gloss_data[synset.name()]:
+                gloss_data[synset.name()][gloss_word] = {
+                    "freq": 1,
+                    "graph_distance": 0,
+                }
+            else:
+                gloss_data[synset.name()][gloss_word]["freq"] += 1
 
         for gloss_word in expanded_gloss_words:
             if gloss_word not in gloss_data[synset.name()]:
@@ -177,15 +181,15 @@ def get_synsets_pair(word, synsets, stwords, vocab):
                 }
             else:
                 gloss_data[synset.name()][gloss_word]["freq"] += 1
-
-        for gloss_word in [x.name() for x in synset.lemmas()]:
-            if gloss_word not in gloss_data[synset.name()]:
-                gloss_data[synset.name()][gloss_word] = {
+        
+        for example_word in example_words:
+            if example_word not in gloss_data[synset.name()]:
+                gloss_data[synset.name()][example_word] = {
                     "freq": 1,
                     "graph_distance": 1,
                 }
             else:
-                gloss_data[synset.name()][gloss_word]["freq"] += 1
+                gloss_data[synset.name()][example_word]["freq"] += 1
         
         for example_word in expanded_example_words:
             if example_word not in gloss_data[synset.name()]:
@@ -207,10 +211,11 @@ def get_synsets_pair(word, synsets, stwords, vocab):
     synsets_data = []
     for synset in synsets:
         synset_words = set([x.name() for x in synset.lemmas()] + [word])
-        sorted_pair = [k for k, v in sorted(gloss_data[synset.name()].items(), key=lambda x: x[1]["weight"], reverse=True)
+        sorted_pair = [(k, v["weight"]) for k, v in sorted(gloss_data[synset.name()].items(), key=lambda x: x[1]["weight"], reverse=True)
                        if k not in stwords and k in vocab and v["weight"] > 0.0 and k not in synset_words]
-        dict_pair = sorted_pair[:25]
-        synsets_data.append({"name": synset.name(), "dict_pair": dict_pair})
+        dict_pair = [word for word, weight in sorted_pair[:25]]
+        weights = [weight for word, weight in sorted_pair[:25]]
+        synsets_data.append({"name": synset.name(), "dict_pair": dict_pair, "weights": weights})
     
     return synsets_data
 
@@ -261,12 +266,12 @@ def main():
             for pos, synsets_data in data.items():
                 if len([x for x in synsets_data if len(x["dict_pair"]) >= 3]) == 0:
                     synset_data = synsets_data[0]
-                    print(word + "|" + pos + "|" + synset_data["name"], "{:.8f}".format(synset_data["prob"]), ",".join(synset_data["dict_pair"]), sep=" ", file=fout)
+                    print(word + "|" + pos + "|" + synset_data["name"], "{:.8f}".format(synset_data["prob"]), ",".join(synset_data["dict_pair"]), ",".join([str(x) for x in synset_data["weights"]]), sep=" ", file=fout)
                 else:
                     for synset_data in synsets_data:
                         if len(synset_data["dict_pair"]) < 3:
                             continue
-                        print(word + "|" + pos + "|" + synset_data["name"], "{:.8f}".format(synset_data["prob"]), ",".join(synset_data["dict_pair"]), sep=" ", file=fout)
+                        print(word + "|" + pos + "|" + synset_data["name"], "{:.8f}".format(synset_data["prob"]), ",".join(synset_data["dict_pair"]), ",".join([str(x) for x in synset_data["weights"]]), sep=" ", file=fout)
 
             print(word)
 

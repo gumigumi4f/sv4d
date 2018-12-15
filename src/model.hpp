@@ -8,6 +8,7 @@
 #include <vector>
 #include <chrono>
 #include <cmath>
+#include <unordered_set>
 
 namespace sv4d {
 
@@ -18,6 +19,7 @@ namespace sv4d {
             sv4d::Vocab vocab;
 
             std::string trainingCorpus;
+            std::string stopWordsFile;
 
             int epochs;
             int embeddingLayerSize;
@@ -47,6 +49,7 @@ namespace sv4d {
 
             std::vector<int> unigramTable;
             std::vector<float> subsamplingFactorTable;
+            std::unordered_set<int> stopWords;
 
             void initialize();
             void training();
@@ -73,6 +76,7 @@ namespace sv4d {
             void initializeUnigramTable();
             void initializeSubsamplingFactorTable();
             void initializeFileSize();
+            void initializeStopWords();
 
             void saveMatrix(const sv4d::Matrix& matrix, const std::string& filepath, bool binary);
             void loadMatrix(sv4d::Matrix& matrix, const std::string& filepath, bool binary);

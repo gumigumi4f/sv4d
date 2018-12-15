@@ -13,7 +13,7 @@ from sv4d import Model
 def main():
     use_sense_prob = True
     if len(sys.argv) >= 6:
-        use_sense_prob = bool(sys.argv[5])
+        use_sense_prob = bool(int(sys.argv[5]))
 
     model = Model(sys.argv[1])
     print("Loading vocab...")
@@ -34,13 +34,29 @@ def main():
         for text_element in corpus.findAll("text"):
             document = []
             for sentence_element in text_element.findAll("sentence"):
-                sentence = [x.attrs["lemma"].lower() for x in sentence_element.children if x.name is not None and x.attrs["lemma"].lower() in model.synset_vocab]
+                sentence = []
+                for child in sentence_element.children:
+                    if child.name is None:
+                        sentence.extend([x.lower() for x in child.title().split("\n") if x.lower() in model.synset_vocab])
+                    else:
+                        if child.attrs["lemma"].lower() not in model.synset_vocab:
+                            continue
+                        sentence.append(child.attrs["lemma"].lower())
                 document.append(sentence)
 
             for e, sentence_element in enumerate(text_element.findAll("sentence")):
-                sentence = [(x.attrs["lemma"].lower(), wsd_dataset_pos_tags[x.attrs["pos"]] if x.attrs["pos"] in wsd_dataset_pos_tags else "", x.attrs["id"] if x.name == "instance" else "")
-                            for x in sentence_element.children if x.name is not None and x.attrs["lemma"].lower() in model.synset_vocab]
-                
+                sentence = []
+                for child in sentence_element.children:
+                    if child.name is None:
+                        sentence.extend([(x.lower(), "", "") for x in child.title().split("\n") if x.lower() in model.synset_vocab])
+                    else:
+                        word = child.attrs["lemma"].lower()
+                        if child.attrs["lemma"].lower() not in model.synset_vocab:
+                            continue
+                        pos = wsd_dataset_pos_tags[child.attrs["pos"]] if child.attrs["pos"] in wsd_dataset_pos_tags else child.attrs["pos"]
+                        instance_id = child.attrs["id"] if child.name == "instance" else ""
+                        sentence.append((word, pos, instance_id))
+
                 for i, (word, pos, instance_id) in enumerate(sentence):
                     if instance_id == "":
                         continue
@@ -51,6 +67,8 @@ def main():
                     prob, synsets = model.calculate_sense_probability(word, pos, contexts, sent, doc, use_sense_prob=use_sense_prob)
 
                     synset = synsets[np.argmax(prob)]
+                    if "." not in synset:
+                        continue
                     synset_keys = [x.key() for x in wn.synset(name=synset).lemmas() if x.name().lower() == word]
                     if len(synset_keys) != 0:
                         synset_key = synset_keys[0]
@@ -72,10 +90,7 @@ def main():
     recall = float(output[1].split("\t")[1].rstrip("%"))
     f1_value = float(output[2].split("\t")[1].rstrip("%"))
 
-    if precision != f1_value or recall != f1_value:
-        raise ValueError
-
-    print(f"Accuracy: {f1_value:.1f}")
+    print(f"Precision: {precision:.1f}  Recall: {recall:.1f}  F1Value: {f1_value:.1f}  ")
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@
 #include <cmath>
 #include <utility>
 #include <deque>
+#include <unordered_set>
 #include <stdio.h>
 
 namespace sv4d {
@@ -22,6 +23,7 @@ namespace sv4d {
         vocab = v;
 
         trainingCorpus = opt.trainingCorpus;
+        stopWordsFile = opt.stopWordsFile;
 
         epochs = opt.epochs;
         embeddingLayerSize = opt.embeddingLayerSize;
@@ -50,6 +52,7 @@ namespace sv4d {
 
         unigramTable = std::vector<int>();
         subsamplingFactorTable = std::vector<float>();
+        stopWords = std::unordered_set<int>();
 
         trainedWordCount = 0;
     }
@@ -59,6 +62,7 @@ namespace sv4d {
         initializeUnigramTable();
         initializeSubsamplingFactorTable();
         initializeFileSize();
+        initializeStopWords();
     }
 
     void Model::training() {
@@ -120,7 +124,6 @@ namespace sv4d {
                 float factor = (std::sqrt(vocab.wordFreq[i] / (subSamplingFactor * vocab.totalWordsNum)) + 1) * (subSamplingFactor * vocab.totalWordsNum) / vocab.wordFreq[i];
                 subsamplingFactorTable[i] = factor;
             }
-            
         }
     }
 
@@ -131,6 +134,23 @@ namespace sv4d {
         }
         fin.seekg(0, fin.end);
         fileSize = fin.tellg();
+    }
+
+    void Model::initializeStopWords() {
+        std::string linebuf;
+        std::ifstream fin(trainingCorpus);
+        if (fin.fail()) {
+            return;
+        }
+
+        while (std::getline(fin, linebuf)) {
+            auto word = sv4d::utils::string::trim(linebuf);
+            if (vocab.synsetVocab.find(word) == vocab.synsetVocab.end()) {
+                continue;
+            }
+
+            stopWords.insert(vocab.synsetVocab[word]);
+        }
     }
 
     void Model::trainingThread(const int threadId) {
@@ -428,26 +448,28 @@ namespace sv4d {
                                     vSynsetIn += embeddingInBufVector;
                                 }
 
-                                // sense selection (update)
-                                sv4d::Vector rewardProb = rewardLogits.softmax(1.0);
-                                sv4d::Vector senseSelectionProb = senseSelectionLogits.softmax(1.0);
+                                if (stopWords.find(outputWidx) == stopWords.end()) {
+                                    // sense selection (update)
+                                    sv4d::Vector rewardProb = rewardLogits.softmax(1.0);
+                                    sv4d::Vector senseSelectionProb = senseSelectionLogits.softmax(1.0);
 
-                                // Update sense selection weight.
-                                //   forward: x = v_feature' * v_sense_selection + v_sense_bias
-                                //            l = Σz * log(softmax(x))
-                                //   backward: dl/dx = g = z * (1 - x) - Σz * x
-                                //             dl/d(v_sense_selection) = v_feature' * g
-                                //             dl/d(v_sense_bias) = g
-                                for (int i = 0; i < senseNum; ++i) {
-                                    int lidx = synsetLemmaIndices[i];
-                                    float g = rewardProb[i] - senseSelectionProb[i];
-                                    sv4d::Vector& vSenseSelection = senseSelectionOutWeight[lidx];
-                                    float& bSenseSelection = senseSelectionOutBias[lidx];
-                                    float w = g * lr;
-                                    // vSenseSelection += featureVectorCache * w;
-                                    // bSenseSelection += w;
-                                    vSenseSelection.fusedMultiplyAdd(featureVectorCache, w);
-                                    bSenseSelection += w;
+                                    // Update sense selection weight.
+                                    //   forward: x = v_feature' * v_sense_selection + v_sense_bias
+                                    //            l = Σz * log(softmax(x))
+                                    //   backward: dl/dx = g = z * (1 - x) - Σz * x
+                                    //             dl/d(v_sense_selection) = v_feature' * g
+                                    //             dl/d(v_sense_bias) = g
+                                    for (int i = 0; i < senseNum; ++i) {
+                                        int lidx = synsetLemmaIndices[i];
+                                        float g = rewardProb[i] - senseSelectionProb[i];
+                                        sv4d::Vector& vSenseSelection = senseSelectionOutWeight[lidx];
+                                        float& bSenseSelection = senseSelectionOutBias[lidx];
+                                        float w = g * lr;
+                                        // vSenseSelection += featureVectorCache * w;
+                                        // bSenseSelection += w;
+                                        vSenseSelection.fusedMultiplyAdd(featureVectorCache, w);
+                                        bSenseSelection += w;
+                                    }
                                 }
                             }
 

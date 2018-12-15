@@ -22,6 +22,7 @@ void printOptionsHelp() {
         << "  -model_dir                whether model should be saved [" << options.modelDir << "]\n"
         << "  -synset_data_file         model vocabulary file with dictionary pair [" << options.synsetDataFile << "]\n"
         << "  -training_corpus          training corpus file path [" << options.synsetDataFile << "]\n"
+        << "  -stop_words_file          stop words file path [" << options.stopWordsFile << "]\n"
         << "  -epoch                    number of epochs [" << options.epochs << "]\n"
         << "  -embedding_layer_size     size of vectors [" << options.embeddingLayerSize << "]\n"
         << "  -min_count                minimal number of word occurences [" << options.minCount << "]\n"

@@ -18,8 +18,8 @@ namespace sv4d {
         minCount = 5;
         windowSize = 5;
         negativeSample = 5;
-        dictSample = 3;
-        maxDictPair = 15;
+        dictSample = 4;
+        maxDictPair = 20;
         threadNum = 1;
         batchSize = 256;
 
@@ -54,6 +54,8 @@ namespace sv4d {
                     synsetDataFile = std::string(args.at(i + 1));
                 } else if (args[i] == "-training_corpus") {
                     trainingCorpus = std::string(args.at(i + 1));
+                } else if (args[i] == "-stop_words_file") {
+                    stopWordsFile = std::string(args.at(i + 1));
                 } else if (args[i] == "-epochs") {
                     epochs = std::stoi(args.at(i + 1));
                 } else if (args[i] == "-embedding_layer_size") {
