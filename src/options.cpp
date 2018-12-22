@@ -12,6 +12,7 @@ namespace sv4d {
         modelDir = "./";
         synsetDataFile = "./synset.txt";
         trainingCorpus = "./corpus.txt";
+        stopWordsFile = "./stopwords.txt";
 
         epochs = 10;
         embeddingLayerSize = 300;
