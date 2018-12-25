@@ -8,6 +8,7 @@
 #include <vector>
 #include <cstdlib>
 #include <numeric>
+#include <random>
 #include <stdio.h>
 
 namespace sv4d {
@@ -138,6 +139,8 @@ namespace sv4d {
 
         synsetfin.clear();
         synsetfin.seekg(0, synsetfin.beg);
+
+        std::mt19937 engine(495);
         while (std::getline(synsetfin, linebuf)) {
             linebuf = sv4d::utils::string::trim(linebuf);
             auto data = sv4d::utils::string::split(linebuf, ' ');
@@ -178,8 +181,9 @@ namespace sv4d {
                         dictPair.dictPair.push_back(synsetVocab[word]);
                         if (dictPair.dictPair.size() >= opt.maxDictPair) {
                             break;
-                        } 
+                        }
                     }
+                    std::shuffle(dictPair.dictPair.begin(), dictPair.dictPair.end(), engine);
                     synsetDictPair[sidx] = dictPair;
                 } else {
                     synsetDictPair[sidx] = sv4d::SynsetDictPair();
