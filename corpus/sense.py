@@ -2,16 +2,20 @@
 
 import sys
 import json
+import tqdm
 import numpy as np
 import scipy as sp
+import pickle
 from collections import defaultdict
 from nltk.corpus import wordnet as wn
 from nltk.corpus import stopwords
 from nltk.parse.corenlp import CoreNLPParser
+from gensim.models.keyedvectors import KeyedVectors
 
 
+use_extended_gloss = True
 use_glossdisambiguated = True
-use_example = True
+exclude_synset_lemma = False
 
 
 class SynsetGloss(object):
@@ -19,7 +23,7 @@ class SynsetGloss(object):
         self.synset_gloss = {}
         self.tokenizer = CoreNLPParser(url='http://localhost:42636')
 
-        self.use_babelnet = True
+        self.use_babelnet = use_extended_gloss
         if self.use_babelnet:
             from py4j.java_gateway import JavaGateway
             gateway = JavaGateway() 
@@ -34,7 +38,10 @@ class SynsetGloss(object):
     def get_synset_gloss(self, name):
         synset = wn.synset(name)
         if self.use_babelnet:
-            synset_id = 'wn:{}{}'.format(str(synset.offset()).zfill(8), synset.pos())
+            synset_pos = synset.pos()
+            if synset_pos == "s":
+                synset_pos = "a"
+            synset_id = 'wn:{}{}'.format(str(synset.offset()).zfill(8), synset_pos)
             definition = self.sense.getGlossByWnSynsetId(synset_id)
             if not definition:
                 definition = synset.definition()
@@ -48,7 +55,7 @@ class SynsetExample(object):
         self.synset_example = {}
         self.tokenizer = CoreNLPParser(url='http://localhost:42636')
 
-        self.use_babelnet = True
+        self.use_babelnet = use_extended_gloss
         if self.use_babelnet:
             from py4j.java_gateway import JavaGateway
             gateway = JavaGateway() 
@@ -63,7 +70,10 @@ class SynsetExample(object):
     def get_synset_example(self, name):
         synset = wn.synset(name)
         if self.use_babelnet:
-            synset_id = 'wn:{}{}'.format(str(synset.offset()).zfill(8), synset.pos())
+            synset_pos = synset.pos()
+            if synset_pos == "s":
+                synset_pos = "a"
+            synset_id = 'wn:{}{}'.format(str(synset.offset()).zfill(8), synset_pos)
             example = self.sense.getExampleByWnSynsetId(synset_id)
             if not example:
                 example = " ".join(synset.examples()).strip()
@@ -87,7 +97,10 @@ class SynsetGlossRelation(object):
     
     def get_gloss_relation(self, name):
         synset = wn.synset(name)
-        synset_id = 'wn:{}{}'.format(str(synset.offset()).zfill(8), synset.pos())
+        synset_pos = synset.pos()
+        if synset_pos == "s":
+            synset_pos = "a"
+        synset_id = 'wn:{}{}'.format(str(synset.offset()).zfill(8), synset_pos)
         related_synset_keys = self.sense.getGlossRelatedWordNetSynsetIds(synset_id)
         related_gloss_synsets = []
         for synset_key in related_synset_keys:
@@ -104,131 +117,116 @@ synset_example = SynsetExample()
 synset_gloss_relation = SynsetGlossRelation()
 
 
-def get_synsets_pair(word, synsets, stwords, vocab):
+def init_gloss_data(depth=2):
     gloss_data = {}
-    for synset in synsets:
+    
+    for synset in tqdm.tqdm(list(wn.all_synsets())):
         gloss_data[synset.name()] = {}
 
-        gloss_words = synset_gloss[synset.name()]
-        example_words = []
-        for gloss_word in gloss_words:
-            if gloss_word not in gloss_data[synset.name()]:
-                gloss_data[synset.name()][gloss_word] = {
-                    "freq": 1,
-                    "graph_distance": 0,
-                }
-            else:
-                gloss_data[synset.name()][gloss_word]["freq"] += 1
+        related_synsets = [synset]
+        for d in range(depth):
+            gloss_words = []
+            example_words = []
+            for s in related_synsets:
+                gloss_words += synset_gloss[s.name()]
+                example_words += synset_example[s.name()]
 
-        if use_example:
-            example_words = synset_example[synset.name()]
+            for w in gloss_words:
+                if w not in gloss_data[synset.name()]:
+                    gloss_data[synset.name()][w] = {
+                        "freq": 1,
+                        "graph_distance": d,
+                    }
+                else:
+                    gloss_data[synset.name()][w]["freq"] += 1
 
-        related_synsets = synset.also_sees() \
-                          + synset.attributes() \
-                          + synset.causes() \
-                          + synset.entailments() \
-                          + synset.hyponyms() \
-                          + synset.hypernyms() \
-                          + synset.instance_hypernyms() \
-                          + synset.instance_hyponyms() \
-                          + synset.member_meronyms() \
-                          + synset.member_holonyms() \
-                          + synset.part_holonyms() \
-                          + synset.part_meronyms() \
-                          + synset.region_domains() \
-                          + synset.substance_meronyms() \
-                          + synset.substance_holonyms() \
-                          + synset.topic_domains() \
-                          + synset.usage_domains() \
-                          + synset.verb_groups()
+            for w in example_words:
+                if w not in gloss_data[synset.name()]:
+                    gloss_data[synset.name()][w] = {
+                        "freq": 1,
+                        "graph_distance": d + 1,
+                    }
+                else:
+                    gloss_data[synset.name()][w]["freq"] += 1
 
-        for lemma in synset.lemmas():
-            related_synsets += [x.synset() for x in lemma.derivationally_related_forms()]
-            related_synsets += [x.synset() for x in lemma.pertainyms()]
+            new_related_synset = []
+            for s in related_synsets:
+                ns = s.also_sees() \
+                     + s.attributes() \
+                     + s.causes() \
+                     + s.entailments() \
+                     + s.hyponyms() \
+                     + s.hypernyms() \
+                     + s.instance_hypernyms() \
+                     + s.instance_hyponyms() \
+                     + s.member_meronyms() \
+                     + s.member_holonyms() \
+                     + s.part_holonyms() \
+                     + s.part_meronyms() \
+                     + s.region_domains() \
+                     + s.substance_meronyms() \
+                     + s.substance_holonyms() \
+                     + s.topic_domains() \
+                     + s.usage_domains() \
+                     + s.verb_groups() \
+                     + s.similar_tos()
 
-        if use_glossdisambiguated:
-            related_synsets += synset_gloss_relation[synset.name()]
+                for l in s.lemmas():
+                    ns += [x.synset() for x in l.derivationally_related_forms()]
+                    ns += [x.synset() for x in l.pertainyms()]
+                
+                if use_glossdisambiguated:
+                    ns += synset_gloss_relation[s.name()]
 
-        unique_related_synsets = []
-        for related_synset in related_synsets:
-            if related_synset.name() in [x.name() for x in unique_related_synsets]:
-                continue
-            unique_related_synsets.append(related_synset)
-
-        expanded_gloss_words = []
-        expanded_sy_words = []
-        expanded_example_words = []
-        for related_synset in unique_related_synsets:
-            expanded_gloss_words += synset_gloss[related_synset.name()]
-            expanded_sy_words += [x.name() for x in related_synset.lemmas()]
-            if use_example:
-                expanded_example_words += synset_example[related_synset.name()]
-        
-        for gloss_word in expanded_sy_words:
-            if gloss_word not in gloss_data[synset.name()]:
-                gloss_data[synset.name()][gloss_word] = {
-                    "freq": 1,
-                    "graph_distance": 0,
-                }
-            else:
-                gloss_data[synset.name()][gloss_word]["freq"] += 1
-
-        for gloss_word in expanded_gloss_words:
-            if gloss_word not in gloss_data[synset.name()]:
-                gloss_data[synset.name()][gloss_word] = {
-                    "freq": 1,
-                    "graph_distance": 1,
-                }
-            else:
-                gloss_data[synset.name()][gloss_word]["freq"] += 1
-        
-        for example_word in example_words:
-            if example_word not in gloss_data[synset.name()]:
-                gloss_data[synset.name()][example_word] = {
-                    "freq": 1,
-                    "graph_distance": 1,
-                }
-            else:
-                gloss_data[synset.name()][example_word]["freq"] += 1
-        
-        for example_word in expanded_example_words:
-            if example_word not in gloss_data[synset.name()]:
-                gloss_data[synset.name()][example_word] = {
-                    "freq": 1,
-                    "graph_distance": 2,
-                }
-            else:
-                gloss_data[synset.name()][example_word]["freq"] += 1
-        
+                new_related_synset += ns
+            
+            related_synsets = list(set(new_related_synset))
     
-    for synset in synsets:
-        for gloss_word in gloss_data[synset.name()].keys():
-            igf = 1 + np.log2(len(synsets) / sum([gloss_word in gloss_data[x.name()] for x in synsets]))
-            graph_distance_weight = (1 / (1 + gloss_data[synset.name()][gloss_word]["graph_distance"]))
-            weight = gloss_data[synset.name()][gloss_word]["freq"] * igf * graph_distance_weight
-            gloss_data[synset.name()][gloss_word]["weight"] = weight
+    return gloss_data
+
+
+def get_synsets_pair(word, pos, stwords, vocab, gloss_data):
+    for synset in wn.synsets(word, pos=pos):
+        target_synset_names = []
+        for lemma in synset.lemmas():
+            target_synset_names.extend([x.name() for x in wn.synsets(lemma.name(), pos=pos)])
+        target_synset_names = list(set(target_synset_names))
+
+        for w in gloss_data[synset.name()].keys():
+            freq = gloss_data[synset.name()][w]["freq"]
+            graph_distance = (1 / (1 + gloss_data[synset.name()][w]["graph_distance"]))
+            igf = 1 + np.log2(len(target_synset_names) / sum([w in gloss_data[x] for x in target_synset_names]))
+            weight = freq * igf * graph_distance
+            gloss_data[synset.name()][w]["weight"] = weight
     
     synsets_data = []
-    for synset in synsets:
-        synset_words = set([x.name() for x in synset.lemmas()] + [word])
-        sorted_pair = [(k, v["weight"]) for k, v in sorted(gloss_data[synset.name()].items(), key=lambda x: x[1]["weight"], reverse=True)
-                       if k not in stwords and k in vocab and v["weight"] > 0.0 and k not in synset_words]
-        dict_pair = [word for word, weight in sorted_pair[:25]]
-        weights = [weight for word, weight in sorted_pair[:25]]
-        synsets_data.append({"name": synset.name(), "dict_pair": dict_pair, "weights": weights})
+    for synset in wn.synsets(word, pos=pos):
+        if exclude_synset_lemma:
+            synset_words = set([x.name() for x in synset.lemmas()])
+        else:
+            synset_words = set()
+        sorted_pair = [k for k, v in sorted(gloss_data[synset.name()].items(), key=lambda x: x[1]["weight"], reverse=True)
+                       if k not in stwords and k in vocab and v["weight"] >= 0.0 and k not in synset_words]
+        dict_pair = sorted_pair[:25]
+        synsets_data.append({"name": synset.name(), "dict_pair": dict_pair})
     
     return synsets_data
 
 
 def main():
     stwords = set(stopwords.words('english'))
+    stwords.add("n't")
+    stwords.add("un")
     
     vocab = set()
     for line in open(sys.argv[1]):
         vocab.add(line.rstrip())
+    
+    gloss_data = init_gloss_data()
+    pickle.dump(gloss_data, open("gloss_data_depth2.pickle", "wb"))
 
     with open(sys.argv[2], "w") as fout:
-        for line in open(sys.argv[1]):
+        for line in tqdm.tqdm(open(sys.argv[1])):
             word = line.rstrip()
             synsets = wn.synsets(word)
             data = defaultdict(list)
@@ -243,7 +241,7 @@ def main():
                 data[pos].append(synset)
             
             for pos, synsets in data.items():
-                data[pos] = get_synsets_pair(word, synsets, stwords, vocab)
+                data[pos] = get_synsets_pair(word, pos, stwords, vocab, gloss_data)
 
             for pos, synsets_data in data.items():
                 total_freq = 0
@@ -266,14 +264,13 @@ def main():
             for pos, synsets_data in data.items():
                 if len([x for x in synsets_data if len(x["dict_pair"]) >= 3]) == 0:
                     synset_data = synsets_data[0]
-                    print(word + "|" + pos + "|" + synset_data["name"], "{:.8f}".format(synset_data["prob"]), ",".join(synset_data["dict_pair"]), ",".join([str(x) for x in synset_data["weights"]]), sep=" ", file=fout)
+                    print(word + "|" + pos + "|" + synset_data["name"], "{:.8f}".format(synset_data["prob"]), ",".join(synset_data["dict_pair"]), sep=" ", file=fout)
                 else:
                     for synset_data in synsets_data:
                         if len(synset_data["dict_pair"]) < 3:
                             continue
-                        print(word + "|" + pos + "|" + synset_data["name"], "{:.8f}".format(synset_data["prob"]), ",".join(synset_data["dict_pair"]), ",".join([str(x) for x in synset_data["weights"]]), sep=" ", file=fout)
-
-            print(word)
+                        print(word + "|" + pos + "|" + synset_data["name"], "{:.8f}".format(synset_data["prob"]), ",".join(synset_data["dict_pair"]), sep=" ", file=fout)
+                #print(word + "|" + pos + "|" + f"{word}.{pos}.other", "{:.8f}".format(0.0), sep=" ", file=fout)
 
 
 if __name__ == "__main__":
