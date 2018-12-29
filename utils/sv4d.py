@@ -95,7 +95,7 @@ class Model:
         
         contexts = [self.synset_vocab[word] for word in contexts if word in self.synset_vocab]
         sentence = [self.synset_vocab[word] for word in sentence if word in self.synset_vocab]
-        document = [self.synset_vocab[word] for word in document if word in self.synset_vocab]
+        document = [[self.synset_vocab[word] for word in s if word in self.synset_vocab] for s in document]
 
         if len(contexts) != 0:
             contexts_vector = self.embedding_in_weight[contexts].mean(axis=0)
@@ -106,7 +106,8 @@ class Model:
         else:
             sentence_vector = np.zeros((self.embedding_in_weight.shape[1],))
         if len(document) != 0:
-            document_vector = self.embedding_in_weight[document].mean(axis=0)
+            sentences_vector = np.array([self.embedding_in_weight[s].mean(axis=0) for s in document if len(s) != 0])
+            document_vector = sentences_vector.mean(axis=0)
         else:
             document_vector = np.zeros((self.embedding_in_weight.shape[1],))
 

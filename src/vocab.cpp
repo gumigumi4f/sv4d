@@ -64,7 +64,13 @@ namespace sv4d {
                 continue;
             }
 
-            for (auto word : sv4d::utils::string::split(linebuf, ' ')) {
+            for (auto word_data : sv4d::utils::string::split(linebuf, ' ')) {
+                auto position = word_data.find("__");
+                if (position == word_data.npos) {
+                    continue;
+                }
+                auto word = word_data.substr(0, position);
+                auto pos = word_data.substr(position + 2);
                 if (wordStats.find(word) == wordStats.end()) {
                     wordStats[word] = 0;
                 }
@@ -102,8 +108,10 @@ namespace sv4d {
             lidx2sidx.push_back(sidx);
         }
 
+        totalWordsNum = std::accumulate(wordFreq.begin(), wordFreq.end(), 0L);
+
         printf("\n");
-        printf("SentenceNum: %ld  DocumentNum: %ld  \n", totalSentenceNum, totalDocumentNum);
+        printf("TotalWordsNum: %ld  SentenceNum: %ld  DocumentNum: %ld  \n", totalWordsNum, totalSentenceNum, totalDocumentNum);
         printf("Reading sense file:  \n");
 
         std::ifstream synsetfin(opt.synsetDataFile);
@@ -224,9 +232,8 @@ namespace sv4d {
 
         lemmaVocabSize = lemmaVocab.size();
         synsetVocabSize = synsetVocab.size();
-        totalWordsNum = std::accumulate(wordFreq.begin(), wordFreq.end(), 0L);
 
-        printf("LemmaVocabSize: %d  SynsetVocabSize: %d  WordVocabSize: %d  TotalWordsNum: %ld  \n", lemmaVocabSize, synsetVocabSize, wordVocabSize, totalWordsNum);
+        printf("LemmaVocabSize: %d  SynsetVocabSize: %d  WordVocabSize: %d  \n", lemmaVocabSize, synsetVocabSize, wordVocabSize);
     }
 
     void Vocab::save(const std::string& filepath) {

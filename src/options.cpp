@@ -27,12 +27,9 @@ namespace sv4d {
         subSamplingFactor = 1e-4;
         initialLearningRate = 0.025;
         minLearningRate = 0.0001;
-        initialTemperature = 1.0;
-        minTemperature = 0.5;
-        initialBetaDict = 0.8;
-        minBetaDict = 0.35;
-        initialBetaReward = 0.8;
-        minBetaReward = 0.35;
+        temperature = 1.0;
+        betaDict = 0.8;
+        betaReward = 0.8;
 
         binary = true;
     }
@@ -79,18 +76,12 @@ namespace sv4d {
                     initialLearningRate = std::stof(args.at(i + 1));
                 } else if (args[i] == "-min_learning_rate") {
                     minLearningRate = std::stof(args.at(i + 1));
-                } else if (args[i] == "-initial_temperature") {
-                    initialTemperature = std::stof(args.at(i + 1));
-                } else if (args[i] == "-min_temperature") {
-                    minTemperature = std::stof(args.at(i + 1));
-                } else if (args[i] == "-initial_beta_dict") {
-                    initialBetaDict = std::stof(args.at(i + 1));
-                } else if (args[i] == "-min_beta_dict") {
-                    minBetaDict = std::stof(args.at(i + 1));
-                } else if (args[i] == "-initial_beta_reward") {
-                    initialBetaReward = std::stof(args.at(i + 1));
-                } else if (args[i] == "-min_beta_reward") {
-                    minBetaReward = std::stof(args.at(i + 1));
+                } else if (args[i] == "-temperature") {
+                    temperature = std::stof(args.at(i + 1));
+                } else if (args[i] == "-beta_dict") {
+                    betaDict = std::stof(args.at(i + 1));
+                } else if (args[i] == "-beta_reward") {
+                    betaReward = std::stof(args.at(i + 1));
                 } else if (args[i] == "-binary") {
                     binary = (std::stoi(args.at(i + 1)) == 1);
                 }

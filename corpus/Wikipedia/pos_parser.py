@@ -26,11 +26,11 @@ pos_map = defaultdict(lambda: "*", {
 
 end_of_document_symbol = "---END.OF.DOCUMENT---".lower()
 
-
 additional_properties = {
     'tokenize.options': 'ptb3Escaping=false, unicodeQuotes=true, splitHyphenated=true, normalizeParentheses=false, normalizeOtherBrackets=false',
     'annotators': 'tokenize, ssplit, pos'
 }
+
 
 def main():
     tokenizer = CoreNLPParser(url='http://localhost:42636')

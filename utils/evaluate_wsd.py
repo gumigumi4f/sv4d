@@ -63,7 +63,7 @@ def main():
 
                     contexts = [x[0] for x in sentence[:i]][-5:] + [x[0] for x in sentence[i + 1:]][:5]
                     sent = [x[0] for x in sentence]
-                    doc = list(more_itertools.flatten(document[max(0, e - 1):min(len(document), e + 1)]))
+                    doc = document[max(0, e - 1):min(len(document), e + 1)]
                     prob, synsets = model.calculate_sense_probability(word, pos, contexts, sent, doc, use_sense_prob=use_sense_prob)
 
                     synset = synsets[np.argmax(prob)]

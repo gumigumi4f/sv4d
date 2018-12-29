@@ -40,7 +40,7 @@ def extract_feature(document_str, model):
                 acontexts.append(word.lower())
     
     contexts = bcontexts[-5:] + acontexts[:5]
-    return (contexts, document[target_sent_row], list(more_itertools.flatten(document[max(0, target_sent_row - 1):min(len(document), target_sent_row + 1)])))
+    return (contexts, document[target_sent_row], document[max(0, target_sent_row - 1):min(len(document), target_sent_row + 1)])
 
 
 def main():

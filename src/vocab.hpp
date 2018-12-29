@@ -11,7 +11,8 @@ namespace sv4d {
         Noun = 0,
         Verb = 1,
         Adjective = 2,
-        Adverb = 3
+        Adverb = 3,
+        Other = 4,
     };
 
     struct SynsetData {
