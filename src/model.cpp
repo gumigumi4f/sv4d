@@ -169,9 +169,6 @@ namespace sv4d {
 
         // hyper parameter
         float lr = initialLearningRate;
-        float temperature = temperature;
-        float betaDict = betaDict;
-        float betaReward = betaReward;
 
         // cache
         int processedWordCount = 0;
