@@ -8,6 +8,24 @@ import dawg
 from collections import defaultdict
 
 
+pos_map = defaultdict(lambda: "*", {
+    "JJ": "a",
+    "JJR": "a",
+    "JJS": "a",
+    "NN": "n",
+    "NNS": "n",
+    "RB": "r",
+    "RBR": "r",
+    "RBS": "r",
+    "VB": "v",
+    "VBD": "v",
+    "VBG": "v",
+    "VBN": "v",
+    "VBP": "v",
+    "VBZ": "v"
+})
+
+
 def main():
     max_length = 1
     compound_word_pos = defaultdict(set)
@@ -39,7 +57,7 @@ def main():
             
             processed_tokens = []
 
-            tokens = line.split(" ")
+            tokens = [x.split("__")[0] + ("*" if x.split("__")[1] in ["NNP", "NNPS"] else "") + "__" + pos_map[x.split("__")[1]] for x in line.split(" ")]
             i = 0
             while i < len(tokens):
                 chars = "_".join([x.split("__")[0] for x in tokens[i:i + max_length]])
