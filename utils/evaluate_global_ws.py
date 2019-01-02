@@ -3,8 +3,6 @@ import numpy as np
 import scipy as sp
 import gensim
 
-from sv4d import Model
-
 
 def main():
     print("Loading weight...")

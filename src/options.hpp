@@ -27,12 +27,9 @@ namespace sv4d {
             float subSamplingFactor;
             float initialLearningRate;
             float minLearningRate;
-            float initialTemperature;
-            float minTemperature;
-            float initialBetaDict;
-            float minBetaDict;
-            float initialBetaReward;
-            float minBetaReward;
+            float temperature;
+            float betaDict;
+            float betaReward;
 
             bool binary;
 

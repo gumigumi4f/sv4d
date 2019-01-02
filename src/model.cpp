@@ -38,12 +38,9 @@ namespace sv4d {
         subSamplingFactor = opt.subSamplingFactor;
         initialLearningRate = opt.initialLearningRate;
         minLearningRate = opt.minLearningRate;
-        initialTemperature = opt.initialTemperature;
-        minTemperature = opt.minTemperature;
-        initialBetaDict = opt.initialBetaDict;
-        minBetaDict = opt.minBetaDict;
-        initialBetaReward = opt.initialBetaReward;
-        minBetaReward = opt.minBetaReward;
+        temperature = opt.temperature;
+        betaDict = opt.betaDict;
+        betaReward = opt.betaReward;
         
         senseSelectionOutWeight = sv4d::Matrix(vocab.lemmaVocabSize, embeddingLayerSize * 3);
         senseSelectionOutBias = sv4d::Vector(vocab.lemmaVocabSize);
@@ -172,13 +169,10 @@ namespace sv4d {
 
         // hyper parameter
         float lr = initialLearningRate;
-        float temperature = initialTemperature;
-        float betaDict = initialBetaDict;
-        float betaReward = initialBetaReward;
 
         // cache
         int processedWordCount = 0;
-        auto sentencesCache = std::deque<std::vector<int>>();
+        auto sentencesCache = std::deque<std::vector<std::tuple<int, sv4d::Pos>>>();
         auto sentenceVectorsCache = std::deque<sv4d::Vector>();
 
         auto outputWidxCandidateCache = std::vector<int>();
@@ -223,8 +217,14 @@ namespace sv4d {
                         eod = true;
                         break;
                     } else {
-                        auto sentence = std::vector<int>();
-                        for (auto word : sv4d::utils::string::split(linebuf, ' ')) {
+                        auto sentence = std::vector<std::tuple<int, sv4d::Pos>>();
+                        for (auto word_data : sv4d::utils::string::split(linebuf, ' ')) {
+                            auto Pos = word_data.find("__");
+                            if (Pos == word_data.npos) {
+                                continue;
+                            }
+                            auto word = word_data.substr(0, Pos);
+                            auto postagstr = word_data.substr(Pos + 2);
                             if (vocab.synsetVocab.find(word) == vocab.synsetVocab.end()) {
                                 continue;
                             }
@@ -232,15 +232,25 @@ namespace sv4d {
                             if (vocab.wordFreq[widx] == 0) {
                                 continue;
                             }
-                            sentence.push_back(widx);
+                            sv4d::Pos postag = sv4d::Pos::Other;
+                            if (postagstr == "n") {
+                                postag = sv4d::Pos::Noun;
+                            } else if (postagstr == "v") {
+                                postag = sv4d::Pos::Verb;
+                            } else if (postagstr == "a") {
+                                postag = sv4d::Pos::Adjective;
+                            } else if (postagstr == "r") {
+                                postag = sv4d::Pos::Adverb;
+                            }
+                            sentence.push_back(std::make_tuple(widx, postag));
                         }
                         processedWordCount += sentence.size();
                         if (sentence.size() >= 5) {
                             sentencesCache.push_back(sentence);
 
                             sv4d::Vector sentenceVector = sv4d::Vector(embeddingLayerSize);
-                            for (int widx : sentence) {
-                                sv4d::Vector& embeddingInVector = embeddingInWeight[widx];
+                            for (auto d : sentence) {
+                                sv4d::Vector& embeddingInVector = embeddingInWeight[std::get<0>(d)];
                                 sentenceVector += embeddingInVector;
                             }
                             sentenceVector /= (int)sentence.size();
@@ -267,8 +277,8 @@ namespace sv4d {
                     int sentenceSize = sentence.size();
 
                     subSampledCache.clear();
-                    for (int widx : sentence) {
-                        subSampledCache.push_back(subsamplingFactorTable[widx] < rand(mt));
+                    for (auto d : sentence) {
+                        subSampledCache.push_back(subsamplingFactorTable[std::get<0>(d)] < rand(mt));
                     }
 
                     // document vector
@@ -295,14 +305,14 @@ namespace sv4d {
                             if (subSampledCache[pos2]) {
                                 continue;
                             }
-                            outputWidxCandidateCache.push_back(sentence[pos2]);
+                            outputWidxCandidateCache.push_back(std::get<0>(sentence[pos2]));
                             count -= 1;
                         }
                         for (int pos2 = pos + 1, count = reducedWindowSize; pos2 < sentenceSize && count != 0; ++pos2) {
                             if (subSampledCache[pos2]) {
                                 continue;
                             }
-                            outputWidxCandidateCache.push_back(sentence[pos2]);
+                            outputWidxCandidateCache.push_back(std::get<0>(sentence[pos2]));
                             count -= 1;
                         }
                         if (outputWidxCandidateCache.size() == 0) {
@@ -318,13 +328,13 @@ namespace sv4d {
                             if (pos == pos2) {
                                 continue;
                             }
-                            sv4d::Vector& embeddingInVector = embeddingInWeight[sentence[pos2]];
+                            sv4d::Vector& embeddingInVector = embeddingInWeight[std::get<0>(sentence[pos2])];
                             contextVectorCache += embeddingInVector;
                         }
                         contextVectorCache /= (maxPos - minPos - 1);
 
                         // input widx
-                        int inputWidx = sentence[pos];
+                        int inputWidx = std::get<0>(sentence[pos]);
 
                         // feature vector
                         for (int i = 0; i < embeddingLayerSize; ++i) {
@@ -345,9 +355,9 @@ namespace sv4d {
                             sv4d::Vector& vWordOutIn = embeddingInWeight[outputWidx];
 
                             // sense training
-                            if (synsetData.validPos.size() != 0) {
+                            if (std::find(synsetData.validPos.begin(), synsetData.validPos.end(), (int)std::get<1>(sentence[pos])) != synsetData.validPos.end()) {
                                 // pos selection (random)
-                                int targetPos = synsetData.validPos[mt() % synsetData.validPos.size()];
+                                int targetPos = (int)std::get<1>(sentence[pos]);
                                 auto& synsetLemmaIndices = synsetData.synsetLemmaIndices[targetPos];
 
                                 // sense selection
@@ -544,15 +554,6 @@ namespace sv4d {
                 // change hyper parameter
                 float progress = trainedWordCount / (float)(epochs * vocab.totalWordsNum + 1);
                 lr = (initialLearningRate - minLearningRate) * (1.0f - progress) + minLearningRate;
-                if (progress <= 0.5) {
-                    temperature = (initialTemperature - minTemperature) * (1.0f - progress * 2) + minTemperature;
-                    betaDict = (initialBetaDict - minBetaDict) * (1.0f - progress * 2) + minBetaDict;
-                    betaReward = (initialBetaReward - minBetaReward) * (1.0f - progress * 2) + minBetaReward;
-                } else {
-                    temperature = minTemperature;
-                    betaDict = minBetaDict;
-                    betaReward = minBetaReward;
-                }
 
                 // print log
                 auto now = std::chrono::system_clock::now();

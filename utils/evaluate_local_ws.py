@@ -4,8 +4,6 @@ import scipy as sp
 import gensim
 from nltk.corpus import wordnet as wn
 
-from sv4d import Model
-
 
 def main():
     pos_tags = {"a": "a", "s": "a", "n": "n", "v": "v", "r": "r"}
