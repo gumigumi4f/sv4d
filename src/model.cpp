@@ -376,7 +376,6 @@ namespace sv4d {
                                     //             dl/d(v_out) = v_in' * g
                                     {
                                         float dot = vSynsetIn % vWordOut;
-                                        rewardLogits[i] += dot;
                                         float g = sv4d::utils::operation::sigmoid(-dot);
                                         float w = g * lr * senseWeight;
                                         // embeddingInBufVector += vWordOut * w;
@@ -412,6 +411,14 @@ namespace sv4d {
                                         vSample.fusedMultiplyAdd(vSynsetIn, w);
                                     }
 
+                                    vSynsetIn += embeddingInBufVector;
+                                }
+
+                                for (int i = 0; i < senseNum; ++i) {
+                                    int sidx = vocab.lidx2sidx[synsetLemmaIndices[i]];
+                                    sv4d::SynsetDictPair& synsetDictPair = vocab.synsetDictPair[sidx];
+                                    auto& dictPair = synsetDictPair.dictPair;
+
                                     // Positive: dictionary pairs for accurate prediction
                                     //   forward: x = v_in' * v_out
                                     //            l = log(sigmoid(x))
@@ -430,17 +437,25 @@ namespace sv4d {
                                             dpos += 1;
                                         }
                                         sv4d::Vector& vSample = embeddingOutWeight[sample];
-                                        rewardLogits[i] += (vWordOutIn % vSample) * betaReward;
-                                        float dot = vSynsetIn % vSample;
-                                        float g = sv4d::utils::operation::sigmoid(-dot);
-                                        float w = g * lr * senseWeight * betaDict;
-                                        // embeddingInBufVector += vSample * w;
-                                        // vSample += vSynsetIn * w;
-                                        embeddingInBufVector.fusedMultiplyAdd(vSample, w);
-                                        vSample.fusedMultiplyAdd(vSynsetIn, w);
-                                    }
 
-                                    vSynsetIn += embeddingInBufVector;
+                                        float maxDot = -10000.0f;
+                                        for (int pos2 = pos - 1, count = reducedWindowSize; pos2 >= 0 && count != 0; --pos2) {
+                                            if (subSampledCache[pos2]) {
+                                                continue;
+                                            }
+                                            maxDot = std::max(embeddingInWeight[sentence[pos2]] % vSample, maxDot);
+                                            count -= 1;
+                                        }
+                                        for (int pos2 = pos + 1, count = reducedWindowSize; pos2 < sentenceSize && count != 0; ++pos2) {
+                                            if (subSampledCache[pos2]) {
+                                                continue;
+                                            }
+                                            maxDot = std::max((embeddingInWeight[sentence[pos2]] % vSample), maxDot);
+                                            count -= 1;
+                                        }
+
+                                        rewardLogits[i] += maxDot * betaReward;
+                                    }
                                 }
 
                                 if (stopWords.find(outputWidx) == stopWords.end()) {
