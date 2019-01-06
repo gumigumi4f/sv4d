@@ -6,7 +6,6 @@ import tqdm
 import numpy as np
 import scipy as sp
 import pickle
-from more_itertools import flatten
 from collections import defaultdict
 from nltk.corpus import wordnet as wn
 from nltk.corpus import stopwords
@@ -120,7 +119,9 @@ synset_gloss_relation = SynsetGlossRelation()
 
 def init_gloss_data(depth=2):
     gloss_data = {}
-    
+
+    target_synset_names = []
+
     for synset in tqdm.tqdm(list(wn.all_synsets())):
         gloss_data[synset.name()] = {}
 
@@ -186,29 +187,32 @@ def init_gloss_data(depth=2):
     return gloss_data
 
 
-def get_synset_pair(synset, stwords, vocab, gloss_data):
-    target_synset_names = []
-    for lemma in synset.lemmas():
-        target_synset_names.extend([x.name() for x in wn.synsets(lemma.name(), pos=synset.pos())])
-    target_synset_names = list(set(target_synset_names))
+def get_synsets_pair(word, pos, stwords, vocab, gloss_data):
+    for synset in wn.synsets(word, pos=pos):
+        target_synset_names = []
+        for lemma in synset.lemmas():
+            target_synset_names.extend([x.name() for x in wn.synsets(lemma.name(), pos=pos)])
+        target_synset_names = list(set(target_synset_names))
 
-    for w in gloss_data[synset.name()].keys():
-        freq = gloss_data[synset.name()][w]["freq"]
-        graph_distance = (1 / (1 + gloss_data[synset.name()][w]["graph_distance"]))
-        igf = 1 + np.log2(len(target_synset_names) / sum([w in gloss_data[x] for x in target_synset_names]))
-        weight = freq * igf * graph_distance
-        gloss_data[synset.name()][w]["weight"] = weight
+        for w in gloss_data[synset.name()].keys():
+            freq = gloss_data[synset.name()][w]["freq"]
+            graph_distance = (1 / (1 + gloss_data[synset.name()][w]["graph_distance"]))
+            igf = 1 + np.log2(len(target_synset_names) / sum([w in gloss_data[x] for x in target_synset_names]))
+            weight = freq * igf * graph_distance
+            gloss_data[synset.name()][w]["weight"] = weight
     
-    if exclude_synset_lemma:
-        synset_words = set([x.name().lower() for x in synset.lemmas()])
-    else:
-        synset_words = set()
-
-    sorted_pair = [k for k, v in sorted(gloss_data[synset.name()].items(), key=lambda x: x[1]["weight"], reverse=True)
-                   if k not in stwords and k in vocab and v["weight"] >= 0.0 and k not in synset_words]
-    dict_pair = sorted_pair[:25]
+    synsets_data = []
+    for synset in wn.synsets(word, pos=pos):
+        if exclude_synset_lemma:
+            synset_words = set([x.name() for x in synset.lemmas()])
+        else:
+            synset_words = set()
+        sorted_pair = [k for k, v in sorted(gloss_data[synset.name()].items(), key=lambda x: x[1]["weight"], reverse=True)
+                       if k not in stwords and k in vocab and v["weight"] >= 0.0 and k not in synset_words]
+        dict_pair = sorted_pair[:25]
+        synsets_data.append({"name": synset.name(), "dict_pair": dict_pair})
     
-    return dict_pair
+    return synsets_data
 
 
 def main():
@@ -220,38 +224,55 @@ def main():
     for line in open(sys.argv[1]):
         vocab.add(line.rstrip())
     
-    #gloss_data = init_gloss_data()
-    #pickle.dump(gloss_data, open("gloss_data_depth2.pickle", "wb"))
-    gloss_data = pickle.load(open("gloss_data_depth2.pickle", "rb"))
-
-    dict_pair_cache = {}
+    gloss_data = init_gloss_data()
+    pickle.dump(gloss_data, open("gloss_data_depth2.pickle", "wb"))
 
     with open(sys.argv[2], "w") as fout:
-        for line in tqdm.tqdm(list(open(sys.argv[1]))):
-            for pos in ["n", "v", "a", "r"]:
-                lemma_name = wn.morphy(line.rstrip(), pos=pos)
-                if lemma_name is None:
+        for line in tqdm.tqdm(open(sys.argv[1])):
+            word = line.rstrip()
+            synsets = wn.synsets(word)
+            data = defaultdict(list)
+            for synset in synsets:
+                pos = synset.pos()
+                if pos == "s":
+                    pos = "a"
+                
+                if synset in data[pos]:
                     continue
+                
+                data[pos].append(synset)
+            
+            for pos, synsets in data.items():
+                data[pos] = get_synsets_pair(word, pos, stwords, vocab, gloss_data)
 
-                freqs = [l.count() for l in wn.lemmas(lemma_name, pos=pos)]
-                total_freq = sum(freqs)
-                probs = [(freq + 1) / (total_freq + len(freqs)) for freq in freqs]
-
-                for lemma, prob in zip(wn.lemmas(lemma_name, pos=pos), probs):
-                    synset = lemma.synset()
-                    pos = synset.pos()
-                    if pos == "s":
-                        pos = "a"
-
-                    if synset.name() in dict_pair_cache:
-                        dict_pair = dict_pair_cache[synset.name()]
+            for pos, synsets_data in data.items():
+                total_freq = 0
+                for synset_data in synsets_data:
+                    lemmas = [x for x in wn.synset(synset_data["name"]).lemmas() if x.name() == word]
+                    if len(lemmas) == 0:
+                        count = 0
                     else:
-                        dict_pair = get_synset_pair(synset, stwords, vocab, gloss_data)
-                        dict_pair_cache[synset.name()] = dict_pair
-                    
-                    print(line.rstrip() + "|" + pos + "|" + synset.name(), "{:.8f}".format(prob), ",".join(dict_pair), ",".join([x.synset().name() for x in lemma.derivationally_related_forms()]), sep=" ", file=fout)
-                    if lemma.name().lower() != lemma.name():
-                        print(lemma.name() + "|" + pos + "|" + synset.name(), "{:.8f}".format(prob), ",".join(dict_pair), ",".join([x.synset().name() for x in lemma.derivationally_related_forms()]), sep=" ", file=fout)
+                        count = lemmas[0].count()
+                    total_freq += count
+                
+                for synset_data in synsets_data:
+                    lemmas = [x for x in wn.synset(synset_data["name"]).lemmas() if x.name() == word]
+                    if len(lemmas) == 0:
+                        count = 0
+                    else:
+                        count = lemmas[0].count()
+                    synset_data["prob"] = (count + 1) / (total_freq + len(synsets_data))
+
+            for pos, synsets_data in data.items():
+                if len([x for x in synsets_data if len(x["dict_pair"]) >= 3]) == 0:
+                    synset_data = synsets_data[0]
+                    print(word + "|" + pos + "|" + synset_data["name"], "{:.8f}".format(synset_data["prob"]), ",".join(synset_data["dict_pair"]), sep=" ", file=fout)
+                else:
+                    for synset_data in synsets_data:
+                        if len(synset_data["dict_pair"]) < 3:
+                            continue
+                        print(word + "|" + pos + "|" + synset_data["name"], "{:.8f}".format(synset_data["prob"]), ",".join(synset_data["dict_pair"]), sep=" ", file=fout)
+
 
 if __name__ == "__main__":
     if len(sys.argv) <= 2:
