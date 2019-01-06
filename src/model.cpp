@@ -172,7 +172,7 @@ namespace sv4d {
 
         // cache
         int processedWordCount = 0;
-        auto sentencesCache = std::deque<std::vector<std::tuple<int, sv4d::Pos>>>();
+        auto sentencesCache = std::deque<std::vector<int>>();
         auto sentenceVectorsCache = std::deque<sv4d::Vector>();
 
         auto outputWidxCandidateCache = std::vector<int>();
@@ -217,14 +217,9 @@ namespace sv4d {
                         eod = true;
                         break;
                     } else {
-                        auto sentence = std::vector<std::tuple<int, sv4d::Pos>>();
-                        for (auto word_data : sv4d::utils::string::split(linebuf, ' ')) {
-                            auto Pos = word_data.find("__");
-                            if (Pos == word_data.npos) {
-                                continue;
-                            }
-                            auto word = word_data.substr(0, Pos);
-                            auto postagstr = word_data.substr(Pos + 2);
+                        auto sentence = std::vector<int>();
+                        for (auto word : sv4d::utils::string::split(linebuf, ' ')) {
+                            
                             if (vocab.synsetVocab.find(word) == vocab.synsetVocab.end()) {
                                 continue;
                             }
@@ -232,17 +227,7 @@ namespace sv4d {
                             if (vocab.wordFreq[widx] == 0) {
                                 continue;
                             }
-                            sv4d::Pos postag = sv4d::Pos::Other;
-                            if (postagstr == "n") {
-                                postag = sv4d::Pos::Noun;
-                            } else if (postagstr == "v") {
-                                postag = sv4d::Pos::Verb;
-                            } else if (postagstr == "a") {
-                                postag = sv4d::Pos::Adjective;
-                            } else if (postagstr == "r") {
-                                postag = sv4d::Pos::Adverb;
-                            }
-                            sentence.push_back(std::make_tuple(widx, postag));
+                            sentence.push_back(widx);
                         }
                         processedWordCount += sentence.size();
                         if (sentence.size() >= 5) {
@@ -250,7 +235,7 @@ namespace sv4d {
 
                             sv4d::Vector sentenceVector = sv4d::Vector(embeddingLayerSize);
                             for (auto d : sentence) {
-                                sv4d::Vector& embeddingInVector = embeddingInWeight[std::get<0>(d)];
+                                sv4d::Vector& embeddingInVector = embeddingInWeight[d];
                                 sentenceVector += embeddingInVector;
                             }
                             sentenceVector /= (int)sentence.size();
@@ -278,7 +263,7 @@ namespace sv4d {
 
                     subSampledCache.clear();
                     for (auto d : sentence) {
-                        subSampledCache.push_back(subsamplingFactorTable[std::get<0>(d)] < rand(mt));
+                        subSampledCache.push_back(subsamplingFactorTable[d] < rand(mt));
                     }
 
                     // document vector
@@ -305,14 +290,14 @@ namespace sv4d {
                             if (subSampledCache[pos2]) {
                                 continue;
                             }
-                            outputWidxCandidateCache.push_back(std::get<0>(sentence[pos2]));
+                            outputWidxCandidateCache.push_back(sentence[pos2]);
                             count -= 1;
                         }
                         for (int pos2 = pos + 1, count = reducedWindowSize; pos2 < sentenceSize && count != 0; ++pos2) {
                             if (subSampledCache[pos2]) {
                                 continue;
                             }
-                            outputWidxCandidateCache.push_back(std::get<0>(sentence[pos2]));
+                            outputWidxCandidateCache.push_back(sentence[pos2]);
                             count -= 1;
                         }
                         if (outputWidxCandidateCache.size() == 0) {
@@ -328,13 +313,13 @@ namespace sv4d {
                             if (pos == pos2) {
                                 continue;
                             }
-                            sv4d::Vector& embeddingInVector = embeddingInWeight[std::get<0>(sentence[pos2])];
+                            sv4d::Vector& embeddingInVector = embeddingInWeight[sentence[pos2]];
                             contextVectorCache += embeddingInVector;
                         }
                         contextVectorCache /= (maxPos - minPos - 1);
 
                         // input widx
-                        int inputWidx = std::get<0>(sentence[pos]);
+                        int inputWidx = sentence[pos];
 
                         // feature vector
                         for (int i = 0; i < embeddingLayerSize; ++i) {
