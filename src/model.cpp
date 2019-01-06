@@ -419,12 +419,28 @@ namespace sv4d {
                                     sv4d::SynsetDictPair& synsetDictPair = vocab.synsetDictPair[sidx];
                                     auto& dictPair = synsetDictPair.dictPair;
 
-                                    // Positive: dictionary pairs for accurate prediction
-                                    //   forward: x = v_in' * v_out
-                                    //            l = log(sigmoid(x))
-                                    //   backward: dl/dx = g = sigmoid(-x)
-                                    //             dl/d(v_in) = g * v_out'
-                                    //             dl/d(v_out) = v_in' * g
+                                    {
+                                        sv4d::Vector& vSynsetIn = embeddingInWeight[sidx];
+
+                                        float maxDot = -10000.0f;
+                                        for (int pos2 = pos - 1, count = reducedWindowSize; pos2 >= 0 && count != 0; --pos2) {
+                                            if (subSampledCache[pos2]) {
+                                                continue;
+                                            }
+                                            maxDot = std::max(vSynsetIn % embeddingOutWeight[sentence[pos2]], maxDot);
+                                            count -= 1;
+                                        }
+                                        for (int pos2 = pos + 1, count = reducedWindowSize; pos2 < sentenceSize && count != 0; ++pos2) {
+                                            if (subSampledCache[pos2]) {
+                                                continue;
+                                            }
+                                            maxDot = std::max(vSynsetIn % embeddingOutWeight[sentence[pos2]], maxDot);
+                                            count -= 1;
+                                        }
+
+                                        rewardLogits[i] += maxDot;
+                                    }
+
                                     for (int j = 0; j < dictSample; ++j) {
                                         if (dictPair.size() == 0) {
                                             break;
