@@ -355,9 +355,9 @@ namespace sv4d {
                             sv4d::Vector& vWordOutIn = embeddingInWeight[outputWidx];
 
                             // sense training
-                            if (std::find(synsetData.validPos.begin(), synsetData.validPos.end(), (int)std::get<1>(sentence[pos])) != synsetData.validPos.end()) {
+                            if (synsetData.validPos.size() != 0) {
                                 // pos selection (random)
-                                int targetPos = (int)std::get<1>(sentence[pos]);
+                                int targetPos = synsetData.validPos[mt() % synsetData.validPos.size()];
                                 auto& synsetLemmaIndices = synsetData.synsetLemmaIndices[targetPos];
 
                                 // sense selection
