@@ -15,6 +15,7 @@
 #include <utility>
 #include <deque>
 #include <unordered_set>
+#include <limits>
 #include <stdio.h>
 
 namespace sv4d {
@@ -453,7 +454,7 @@ namespace sv4d {
                                     {
                                         sv4d::Vector& vSynsetIn = embeddingInWeight[sidx];
 
-                                        float maxDot = -10000.0f;
+                                        float maxDot = std::numeric_limits<float>::lowest();
                                         for (int pos2 = pos - 1, count = wsdWindowSize; pos2 >= 0 && count != 0; --pos2) {
                                             if (subSampledCache[pos2]) {
                                                 continue;
@@ -486,7 +487,7 @@ namespace sv4d {
                                         }
                                         sv4d::Vector& vSample = embeddingOutWeight[sample];
 
-                                        float maxDot = -10000.0f;
+                                        float maxDot = std::numeric_limits<float>::lowest();
                                         for (int pos2 = pos - 1, count = wsdWindowSize; pos2 >= 0 && count != 0; --pos2) {
                                             if (subSampledCache[pos2]) {
                                                 continue;
