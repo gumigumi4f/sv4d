@@ -2,10 +2,10 @@
 
 import sys
 import json
+import pickle
 import tqdm
 import numpy as np
 import scipy as sp
-import pickle
 from collections import defaultdict
 from nltk.corpus import wordnet as wn
 from nltk.corpus import stopwords
@@ -119,8 +119,6 @@ synset_gloss_relation = SynsetGlossRelation()
 
 def init_gloss_data(depth=2):
     gloss_data = {}
-
-    target_synset_names = []
 
     for synset in tqdm.tqdm(list(wn.all_synsets())):
         gloss_data[synset.name()] = {}
