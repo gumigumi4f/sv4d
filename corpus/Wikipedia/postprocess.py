@@ -73,8 +73,8 @@ def main():
             print(" ".join(processed_tokens), file=fout)
             
             if (e + 1) % 1000 == 0:
-                eta = 59806839 / (e + 1) * (time.time() - start) - (time.time() - start)
-                sys.stdout.write("\rsent: %i/%i\tETA: %f" % (e + 1, 59806839, eta))
+                eta = 59853123 / (e + 1) * (time.time() - start) - (time.time() - start)
+                sys.stdout.write("\rsent: %i/%i\tETA: %f" % (e + 1, 59853123, eta))
                 sys.stdout.flush()
 
 
