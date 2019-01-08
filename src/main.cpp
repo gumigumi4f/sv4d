@@ -37,7 +37,7 @@ void printOptionsHelp() {
         << "  -min_learning_rate        min learning rate [" << options.minLearningRate << "]\n"
         << "  -initial_temperature      initial softmax temperature [" << options.initialTemperature << "]\n"
         << "  -min_temperature          min softmaxs temperature [" << options.minTemperature << "]\n"
-        << "  -beta_dict              beta dict [" << options.betaDict << "]\n"
+        << "  -beta_dict                beta dict [" << options.betaDict << "]\n"
         << "  -beta_reward              beta reward [" << options.betaReward << "]\n"
         << std::endl;
 }

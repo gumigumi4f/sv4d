@@ -51,14 +51,14 @@ def main():
         rating = float(rating_str)
         true_similarities.append(rating)
     
-    global_similarity = sp.stats.spearmanr(true_similarities, local_similarities)[0]
+    score = sp.stats.spearmanr(true_similarities, local_similarities)[0]
 
-    print(f"Global Similarity: {global_similarity * 100.0:.3f}")
+    print(f"Sense-based Score: {score * 100.0:.3f}")
 
 
 if __name__ == "__main__":
     if len(sys.argv) <= 5:
-        print("usage: python evaluate_cws.py <weight_model_file> <ws_file> <target_wcol1> <target_wcol2> <target_scol> [<target_poscol1> <target_poscol2>]", file=sys.stderr)
+        print("usage: python evaluate_sense_ws.py <weight_model_file> <ws_file> <target_wcol1> <target_wcol2> <target_scol> [<target_poscol1> <target_poscol2>]", file=sys.stderr)
         exit()
 
     main()

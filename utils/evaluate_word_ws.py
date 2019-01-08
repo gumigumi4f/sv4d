@@ -29,14 +29,14 @@ def main():
         rating = float(rating_str)
         true_similarities.append(rating)
     
-    global_similarity = sp.stats.spearmanr(true_similarities, global_similarities)[0]
+    score = sp.stats.spearmanr(true_similarities, global_similarities)[0]
 
-    print(f"Global Similarity: {global_similarity * 100.0:.3f}")
+    print(f"Word-based Score: {score * 100.0:.3f}")
 
 
 if __name__ == "__main__":
     if len(sys.argv) <= 5:
-        print("usage: python evaluate_cws.py <weight_model_file> <ws_file> <target_wcol1> <target_wcol2> <target_scol>", file=sys.stderr)
+        print("usage: python evaluate_word_ws.py <weight_model_file> <ws_file> <target_wcol1> <target_wcol2> <target_scol>", file=sys.stderr)
         exit()
 
     main()
