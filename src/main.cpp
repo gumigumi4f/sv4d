@@ -27,6 +27,7 @@ void printOptionsHelp() {
         << "  -embedding_layer_size     size of vectors [" << options.embeddingLayerSize << "]\n"
         << "  -min_count                minimal number of word occurences [" << options.minCount << "]\n"
         << "  -window_size              size of the context window [" << options.windowSize << "]\n"
+        << "  -wsd_window_size          size of the context window for wsd [" << options.wsdWindowSize << "]\n"
         << "  -negative_sample          number of negatives sampled [" << options.negativeSample << "]\n"
         << "  -dict_sample              number of dictionary pairs sampled per word [" << options.dictSample << "]\n"
         << "  -max_dict_pair            number of dictionary pairs used [" << options.maxDictPair << "]\n"
@@ -34,8 +35,9 @@ void printOptionsHelp() {
         << "  -sub_sampling_factor      threshold for occurrence of words [" << options.subSamplingFactor << "]\n"
         << "  -initial_learning_rate    initial learning rate [" << options.initialLearningRate << "]\n"
         << "  -min_learning_rate        min learning rate [" << options.minLearningRate << "]\n"
-        << "  -temperature              softmax temperature [" << options.temperature << "]\n"
-        << "  -beta_dict                beta dict [" << options.betaDict << "]\n"
+        << "  -initial_temperature      initial softmax temperature [" << options.initialTemperature << "]\n"
+        << "  -min_temperature          min softmaxs temperature [" << options.minTemperature << "]\n"
+        << "  -beta_dict              beta dict [" << options.betaDict << "]\n"
         << "  -beta_reward              beta reward [" << options.betaReward << "]\n"
         << std::endl;
 }

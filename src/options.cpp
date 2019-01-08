@@ -18,6 +18,7 @@ namespace sv4d {
         embeddingLayerSize = 300;
         minCount = 5;
         windowSize = 5;
+        wsdWindowSize = 20;
         negativeSample = 5;
         dictSample = 4;
         maxDictPair = 20;
@@ -27,9 +28,9 @@ namespace sv4d {
         subSamplingFactor = 1e-4;
         initialLearningRate = 0.025;
         minLearningRate = 0.0001;
-        temperature = 1.0;
-        betaDict = 0.8;
-        betaReward = 0.8;
+        initialTemperature = 1.0;
+        minTemperature = 0.1;
+        betaReward = 0.65;
 
         binary = true;
     }
@@ -68,6 +69,8 @@ namespace sv4d {
                     dictSample = std::stoi(args.at(i + 1));
                 } else if (args[i] == "-max_dict_pair") {
                     maxDictPair = std::stoi(args.at(i + 1));
+                } else if (args[i] == "-wsd_window_size") {
+                    wsdWindowSize = std::stoi(args.at(i + 1));
                 } else if (args[i] == "-thread_num") {
                     threadNum = std::stoi(args.at(i + 1));
                 } else if (args[i] == "-sub_sampling_factor") {
@@ -76,8 +79,10 @@ namespace sv4d {
                     initialLearningRate = std::stof(args.at(i + 1));
                 } else if (args[i] == "-min_learning_rate") {
                     minLearningRate = std::stof(args.at(i + 1));
-                } else if (args[i] == "-temperature") {
-                    temperature = std::stof(args.at(i + 1));
+                } else if (args[i] == "-initial_temperature") {
+                    initialTemperature = std::stof(args.at(i + 1));
+                } else if (args[i] == "-min_temperature") {
+                    minTemperature = std::stof(args.at(i + 1));
                 } else if (args[i] == "-beta_dict") {
                     betaDict = std::stof(args.at(i + 1));
                 } else if (args[i] == "-beta_reward") {

@@ -64,13 +64,7 @@ namespace sv4d {
                 continue;
             }
 
-            for (auto word_data : sv4d::utils::string::split(linebuf, ' ')) {
-                auto position = word_data.find("__");
-                if (position == word_data.npos) {
-                    continue;
-                }
-                auto word = word_data.substr(0, position);
-                auto pos = word_data.substr(position + 2);
+            for (auto word : sv4d::utils::string::split(linebuf, ' ')) {
                 if (wordStats.find(word) == wordStats.end()) {
                     wordStats[word] = 0;
                 }

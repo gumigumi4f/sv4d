@@ -5,21 +5,41 @@ import sys
 import json
 import time
 import dawg
+from collections import defaultdict
+
+
+pos_map = defaultdict(lambda: "*", {
+    "JJ": "a",
+    "JJR": "a",
+    "JJS": "a",
+    "NN": "n",
+    "NNS": "n",
+    "RB": "r",
+    "RBR": "r",
+    "RBS": "r",
+    "VB": "v",
+    "VBD": "v",
+    "VBG": "v",
+    "VBN": "v",
+    "VBP": "v",
+    "VBZ": "v"
+})
 
 
 def main():
     max_length = 1
-    compound_words = []
+    compound_word_pos = defaultdict(set)
     for line in open(sys.argv[1]):
-        word = line.rstrip()
+        data, _, _ = line.rstrip().split(" ")
+        word, pos, _ = data.split("|")
         max_length = max(len(word.split("_")), max_length)
 
         if len(word.split("_")) <= 1:
             continue
 
-        compound_words.append(word)
+        compound_word_pos[word].add(pos)
     
-    compound_words_dawg = dawg.DAWG(compound_words)
+    compound_words_dawg = dawg.DAWG([k for k, v in compound_word_pos.items()])
 
     with open(sys.argv[3], "w") as fout:
         start = time.time()
@@ -36,10 +56,10 @@ def main():
             
             processed_tokens = []
 
-            tokens = line.split(" ")
+            tokens = [x.split("__")[0] + ("*" if x.split("__")[1] in ["NNP", "NNPS"] else "") for x in line.split(" ")]
             i = 0
             while i < len(tokens):
-                chars = "_".join([x for x in tokens[i:i + max_length]])
+                chars = "_".join([x.split("__")[0] for x in tokens[i:i + max_length]])
                 common_prefix = compound_words_dawg.prefixes(chars)
                 if common_prefix:
                     common_prefix_max = max(common_prefix, key=lambda x: len(x))
@@ -60,7 +80,7 @@ def main():
 
 if __name__ == "__main__":
     if len(sys.argv) <= 3:
-        print("usage: python postprocess.py <vocab_file> <input_file> <output_file>", file=sys.stderr)
+        print("usage: python postprocess.py <sense_file> <input_file> <output_file>", file=sys.stderr)
         exit()
 
     main()
