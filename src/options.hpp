@@ -30,6 +30,7 @@ namespace sv4d {
             float minLearningRate;
             float initialTemperature;
             float minTemperature;
+            float betaDict;
             float betaReward;
 
             bool binary;

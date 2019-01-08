@@ -41,6 +41,7 @@ namespace sv4d {
         minLearningRate = opt.minLearningRate;
         initialTemperature = opt.initialTemperature;
         minTemperature = opt.minTemperature;
+        betaDict = opt.betaDict;
         betaReward = opt.betaReward;
         
         senseSelectionOutWeight = sv4d::Matrix(vocab.lemmaVocabSize, embeddingLayerSize * 3);
@@ -412,6 +413,33 @@ namespace sv4d {
                                         vSample.fusedMultiplyAdd(vSynsetIn, w);
                                     }
 
+                                    // Positive: dictionary pairs for accurate prediction
+                                    //   forward: x = v_in' * v_out
+                                    //            l = log(sigmoid(x))
+                                    //   backward: dl/dx = g = sigmoid(-x)
+                                    //             dl/d(v_in) = g * v_out'
+                                    //             dl/d(v_out) = v_in' * g
+                                    for (int j = 0; j < dictSample; ++j) {
+                                        if (dictPair.size() == 0) {
+                                            break;
+                                        }
+                                        int& dpos = dictPairPos[sidx];
+                                        int sample = dictPair[dpos];
+                                        if (dpos == dictPair.size() - 1) {
+                                            dpos = 0;
+                                        } else {
+                                            dpos += 1;
+                                        }
+                                        sv4d::Vector& vSample = embeddingOutWeight[sample];
+                                        float dot = vSynsetIn % vSample;
+                                        float g = sv4d::utils::operation::sigmoid(-dot);
+                                        float w = g * lr * senseWeight * betaDict;
+                                        // embeddingInBufVector += vSample * w;
+                                        // vSample += vSynsetIn * w;
+                                        embeddingInBufVector.fusedMultiplyAdd(vSample, w);
+                                        vSample.fusedMultiplyAdd(vSynsetIn, w);
+                                    }
+
                                     vSynsetIn += embeddingInBufVector;
                                 }
 
@@ -486,7 +514,7 @@ namespace sv4d {
                                     // Update sense selection weight.
                                     //   forward: x = v_feature' * v_sense_selection + v_sense_bias
                                     //            l = Σz * log(softmax(x))
-                                    //   backward: dl/dx = g = z * (1 - x) - Σz * x
+                                    //   backward: dl/dx = g = z - x
                                     //             dl/d(v_sense_selection) = v_feature' * g
                                     //             dl/d(v_sense_bias) = g
                                     for (int i = 0; i < senseNum; ++i) {

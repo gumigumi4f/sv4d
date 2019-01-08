@@ -83,6 +83,8 @@ namespace sv4d {
                     initialTemperature = std::stof(args.at(i + 1));
                 } else if (args[i] == "-min_temperature") {
                     minTemperature = std::stof(args.at(i + 1));
+                } else if (args[i] == "-beta_dict") {
+                    betaDict = std::stof(args.at(i + 1));
                 } else if (args[i] == "-beta_reward") {
                     betaReward = std::stof(args.at(i + 1));
                 } else if (args[i] == "-binary") {
