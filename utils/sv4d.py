@@ -30,7 +30,10 @@ class Model:
 
     def __getitem__(self, word):
         if word not in self.synset_vocab:
-            raise ValueError("Word %s is not in vocab" % word)
+            if word + "*" not in self.synset_vocab:
+                raise ValueError("Word %s is not in vocab" % word)
+            else:
+                word = word + "*"
         return self.embedding_in_weight[self.synset_vocab[word]]
 
     def load_vocab(self):
@@ -86,12 +89,14 @@ class Model:
     
     def calculate_sense_probability(self, word, pos, contexts, sentence, document, use_sense_prob=False):
         if word not in self.synset_vocab:
-            raise ValueError("Word %s is not found in vocab" % (word))
+            if word + "*" not in self.synset_vocab:
+                raise ValueError("Word %s is not in vocab" % word)
+            else:
+                word = word + "*"
 
         synset_data = self.widx2lidxs[self.synset_vocab[word]]
         if pos not in synset_data:
             return (np.ones((1,)), [word])
-            # raise ValueError("Pos %s is not found in synset data" % (pos))
         
         contexts = [self.synset_vocab[word] for word in contexts if word in self.synset_vocab]
         sentence = [self.synset_vocab[word] for word in sentence if word in self.synset_vocab]
