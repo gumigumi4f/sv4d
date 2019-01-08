@@ -28,6 +28,7 @@ namespace sv4d {
         epochs = opt.epochs;
         embeddingLayerSize = opt.embeddingLayerSize;
         windowSize = opt.windowSize;
+        wsdWindowSize = opt.wsdWindowSize;
         negativeSample = opt.negativeSample;
         dictSample = opt.dictSample;
         maxDictPair = opt.maxDictPair;
@@ -38,8 +39,8 @@ namespace sv4d {
         subSamplingFactor = opt.subSamplingFactor;
         initialLearningRate = opt.initialLearningRate;
         minLearningRate = opt.minLearningRate;
-        temperature = opt.temperature;
-        betaDict = opt.betaDict;
+        initialTemperature = opt.initialTemperature;
+        minTemperature = opt.minTemperature;
         betaReward = opt.betaReward;
         
         senseSelectionOutWeight = sv4d::Matrix(vocab.lemmaVocabSize, embeddingLayerSize * 3);
@@ -169,6 +170,7 @@ namespace sv4d {
 
         // hyper parameter
         float lr = initialLearningRate;
+        float temp = initialTemperature;
 
         // cache
         int processedWordCount = 0;
@@ -337,7 +339,6 @@ namespace sv4d {
                             sv4d::SynsetData& synsetData = vocab.widx2lidxs[inputWidx];
 
                             sv4d::Vector& vWordOut = embeddingOutWeight[outputWidx];
-                            sv4d::Vector& vWordOutIn = embeddingInWeight[outputWidx];
 
                             // sense training
                             if (synsetData.validPos.size() != 0) {
@@ -352,11 +353,11 @@ namespace sv4d {
                                     int lidx = synsetLemmaIndices[i];
                                     senseSelectionLogits[i] = (featureVectorCache % senseSelectionOutWeight[lidx]) + senseSelectionOutBias[lidx];
                                 }
-                                sv4d::Vector senseSelectionProbTemperature = senseSelectionLogits.softmax(temperature);
+                                sv4d::Vector senseSelectionProbTemperature = senseSelectionLogits.softmax(temp);
 
                                 sv4d::Vector rewardLogits = sv4d::Vector(senseNum);
 
-                                // embedding
+                                // embedding module
                                 for (int i = 0; i < senseNum; ++i) {
                                     embeddingInBufVector.setZero();
 
@@ -414,23 +415,25 @@ namespace sv4d {
                                     vSynsetIn += embeddingInBufVector;
                                 }
 
+                                // sense selection (update)
                                 for (int i = 0; i < senseNum; ++i) {
                                     int sidx = vocab.lidx2sidx[synsetLemmaIndices[i]];
                                     sv4d::SynsetDictPair& synsetDictPair = vocab.synsetDictPair[sidx];
                                     auto& dictPair = synsetDictPair.dictPair;
 
+                                    // reward by synset embedding
                                     {
                                         sv4d::Vector& vSynsetIn = embeddingInWeight[sidx];
 
                                         float maxDot = -10000.0f;
-                                        for (int pos2 = pos - 1, count = reducedWindowSize; pos2 >= 0 && count != 0; --pos2) {
+                                        for (int pos2 = pos - 1, count = wsdWindowSize; pos2 >= 0 && count != 0; --pos2) {
                                             if (subSampledCache[pos2]) {
                                                 continue;
                                             }
                                             maxDot = std::max(vSynsetIn % embeddingOutWeight[sentence[pos2]], maxDot);
                                             count -= 1;
                                         }
-                                        for (int pos2 = pos + 1, count = reducedWindowSize; pos2 < sentenceSize && count != 0; ++pos2) {
+                                        for (int pos2 = pos + 1, count = wsdWindowSize; pos2 < sentenceSize && count != 0; ++pos2) {
                                             if (subSampledCache[pos2]) {
                                                 continue;
                                             }
@@ -441,6 +444,7 @@ namespace sv4d {
                                         rewardLogits[i] += maxDot;
                                     }
 
+                                    // reward by dict pair
                                     for (int j = 0; j < dictSample; ++j) {
                                         if (dictPair.size() == 0) {
                                             break;
@@ -455,14 +459,14 @@ namespace sv4d {
                                         sv4d::Vector& vSample = embeddingOutWeight[sample];
 
                                         float maxDot = -10000.0f;
-                                        for (int pos2 = pos - 1, count = reducedWindowSize; pos2 >= 0 && count != 0; --pos2) {
+                                        for (int pos2 = pos - 1, count = wsdWindowSize; pos2 >= 0 && count != 0; --pos2) {
                                             if (subSampledCache[pos2]) {
                                                 continue;
                                             }
                                             maxDot = std::max(embeddingInWeight[sentence[pos2]] % vSample, maxDot);
                                             count -= 1;
                                         }
-                                        for (int pos2 = pos + 1, count = reducedWindowSize; pos2 < sentenceSize && count != 0; ++pos2) {
+                                        for (int pos2 = pos + 1, count = wsdWindowSize; pos2 < sentenceSize && count != 0; ++pos2) {
                                             if (subSampledCache[pos2]) {
                                                 continue;
                                             }
@@ -475,7 +479,7 @@ namespace sv4d {
                                 }
 
                                 if (stopWords.find(outputWidx) == stopWords.end()) {
-                                    // sense selection (update)
+                                    
                                     sv4d::Vector rewardProb = rewardLogits.softmax(1.0);
                                     sv4d::Vector senseSelectionProb = senseSelectionLogits.softmax(1.0);
 
@@ -570,6 +574,7 @@ namespace sv4d {
                 // change hyper parameter
                 float progress = trainedWordCount / (float)(epochs * vocab.totalWordsNum + 1);
                 lr = (initialLearningRate - minLearningRate) * (1.0f - progress) + minLearningRate;
+                temp = (initialTemperature - minTemperature) * (1.0f - progress) + minTemperature;
 
                 // print log
                 auto now = std::chrono::system_clock::now();

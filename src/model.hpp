@@ -24,6 +24,7 @@ namespace sv4d {
             int epochs;
             int embeddingLayerSize;
             int windowSize;
+            int wsdWindowSize;
             int negativeSample;
             int dictSample;
             int maxDictPair;
@@ -35,8 +36,8 @@ namespace sv4d {
             float subSamplingFactor;
             float initialLearningRate;
             float minLearningRate;
-            float temperature;
-            float betaDict;
+            float initialTemperature;
+            float minTemperature;
             float betaReward;
 
             sv4d::Matrix senseSelectionOutWeight;

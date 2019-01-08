@@ -23,12 +23,13 @@ namespace sv4d {
             int maxDictPair;
             int threadNum;
             int batchSize;
+            int wsdWindowSize;
 
             float subSamplingFactor;
             float initialLearningRate;
             float minLearningRate;
-            float temperature;
-            float betaDict;
+            float initialTemperature;
+            float minTemperature;
             float betaReward;
 
             bool binary;
