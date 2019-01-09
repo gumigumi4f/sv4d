@@ -223,7 +223,7 @@ def main():
         vocab.add(line.rstrip())
     
     gloss_data = init_gloss_data()
-    pickle.dump(gloss_data, open("gloss_data_depth2.pickle", "wb"))
+    # pickle.dump(gloss_data, open("gloss_data_depth2.pickle", "wb"))
 
     with open(sys.argv[2], "w") as fout:
         for line in tqdm.tqdm(open(sys.argv[1])):
