@@ -16,12 +16,12 @@ def main():
         use_sense_prob = bool(int(sys.argv[5]))
 
     model = Model(sys.argv[1])
-    print("Loading vocab...")
+    # print("Loading vocab...")
     model.load_vocab()
-    print("Loading weight...")
+    # print("Loading weight...")
     model.load_weight()
 
-    print("Calculating accuracy...")
+    # print("Calculating accuracy...")
     wsd_dataset_pos_tags = {
         "NOUN": "n",
         "VERB": "v",

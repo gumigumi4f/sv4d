@@ -5,10 +5,10 @@ import gensim
 
 
 def main():
-    print("Loading weight...")
+    # print("Loading weight...")
     model = gensim.models.keyedvectors.KeyedVectors.load_word2vec_format(sys.argv[1], binary=True)
 
-    print("Calculate similarities...")
+    # print("Calculate similarities...")
     global_similarities = []
     true_similarities = []
     for line in list(open(sys.argv[2]))[1:]:

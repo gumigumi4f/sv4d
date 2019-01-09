@@ -49,12 +49,12 @@ def main():
         use_sense_prob = bool(int(sys.argv[5]))
 
     model = Model(sys.argv[1])
-    print("Loading vocab...")
+    # print("Loading vocab...")
     model.load_vocab()
-    print("Loading weight...")
+    # print("Loading weight...")
     model.load_weight()
 
-    print("Calculate similarities...")
+    # print("Calculate similarities...")
     maximum_similarities = []
     average_similarities = []
     global_similarities = []
@@ -104,9 +104,9 @@ def main():
     average_similarity = sp.stats.spearmanr(true_similarities, average_similarities)[0]
     global_similarity = sp.stats.spearmanr(true_similarities, global_similarities)[0]
 
-    print(f"Maximum Similarity: {maximum_similarity * 100.0:.3f}")
-    print(f"Average Similarity: {average_similarity * 100.0:.3f}")
-    print(f"Global Similarity: {global_similarity * 100.0:.3f}")
+    print(f"MaxSimC: {maximum_similarity * 100.0:.3f}")
+    print(f"AvgSimC: {average_similarity * 100.0:.3f}")
+    print(f"Global: {global_similarity * 100.0:.3f}")
 
 
 if __name__ == "__main__":
