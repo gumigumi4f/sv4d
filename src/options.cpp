@@ -21,8 +21,8 @@ namespace sv4d {
         wsdWindowSize = 20;
         negativeSample = 5;
         dictSample = 4;
-        maxDictPair = 20;
-        threadNum = 1;
+        maxDictPair = 15;
+        threadNum = 12;
         batchSize = 256;
 
         subSamplingFactor = 1e-4;
@@ -30,7 +30,8 @@ namespace sv4d {
         minLearningRate = 0.0001;
         initialTemperature = 1.0;
         minTemperature = 0.1;
-        betaReward = 0.65;
+        betaDict = 0.20;
+        betaReward = 1.00;
 
         binary = true;
     }
