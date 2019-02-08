@@ -2,7 +2,7 @@ SV4D: Sense Vector for Disambiguation
 --
 
 Knowledge-based Word Sense Disambiguation (WSD) and Representation (WSR) tools.
-Only we need to training model is unannotaed corpus and list of words related to target sense.
+Only we need to training model is unannotated corpus and list of words related to target sense.
 
 Requirements
 --
