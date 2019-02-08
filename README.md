@@ -44,8 +44,8 @@ Also you have to download BabelNet API and Stanford CoreNLP, and locate it to "t
 # to export sense.txt using WordNet and BabelNet
 cd ./tools/BabelNet-API-4.0.1
 cp ../../corpus/Sense.java ./
-javac -classpath "lib/*:babelnet-api-4.0.1.jar:config:<your pythob path here>/share/py4j/py4j0.10.7.jar" Sense.java
-nohup java -classpath "lib/*:babelnet-api-4.0.1.jar:config:<your pythob path here>/share/py4j/py4j0.10.7.jar:." Sense &
+javac -classpath "lib/*:babelnet-api-4.0.1.jar:config:<your python path here>/share/py4j/py4j0.10.7.jar" Sense.java
+nohup java -classpath "lib/*:babelnet-api-4.0.1.jar:config:<your python path here>/share/py4j/py4j0.10.7.jar:." Sense &
 cd ../../corpus
 python sense.py vocab.txt sense.txt
 
